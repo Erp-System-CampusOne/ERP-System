@@ -664,3 +664,161 @@ model ResearchGrant {
 
   @@index([awardedDate])
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  PHASE 1: FOUNDATION SCHEMA & MIGRATION INFRASTRUCTURE (P1.1 & P1.2)
+//  Additive-only tables with native UUID primary keys.
+//  Existing legacy tables remain completely untouched.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── P1.1: Migration Infrastructure ──────────────────────────────────────────
+
+model IdMap {
+  tableName String   @map("table_name")
+  oldId     String   @map("old_id")
+  newId     String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("new_id")
+  createdAt DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  @@id([tableName, oldId])
+  @@unique([tableName, newId])
+  @@index([tableName])
+  @@map("_id_map")
+}
+
+model TermDateMap {
+  academicTermId       String       @db.Uuid @map("academic_term_id")
+  legacySemesterNumber Int?         @map("legacy_semester_number")
+  entryCohortYear      Int?         @db.SmallInt @map("entry_cohort_year")
+  dateRangeStart       DateTime     @db.Date @map("date_range_start")
+  dateRangeEnd         DateTime     @db.Date @map("date_range_end")
+  confidence           String       @map("confidence")
+  notes                String?      @map("notes")
+  createdAt            DateTime     @default(now()) @db.Timestamptz @map("created_at")
+
+  academicTerm         AcademicTerm @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+
+  @@id([academicTermId, dateRangeStart])
+  @@index([legacySemesterNumber, entryCohortYear])
+  @@map("_term_date_map")
+}
+
+// ─── P1.2: Institutional Hierarchy ───────────────────────────────────────────
+
+model Institution {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code      String   @unique
+  name      String
+  legalName String?  @map("legal_name")
+  website   String?
+  status    String   @default("active")
+  createdAt DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  campuses      Campus[]
+  academicYears AcademicYear[]
+  programs      Program[]
+
+  @@map("institutions")
+}
+
+model Campus {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String      @db.Uuid @map("institution_id")
+  code          String
+  name          String
+  address       String?
+  timezone      String      @default("Asia/Kolkata")
+  status        String      @default("active")
+  createdAt     DateTime    @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt     DateTime    @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  rooms         Room[]
+
+  @@unique([institutionId, code])
+  @@index([institutionId])
+  @@map("campuses")
+}
+
+model AcademicYear {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String         @db.Uuid @map("institution_id")
+  code          String
+  name          String
+  startDate     DateTime       @db.Date @map("start_date")
+  endDate       DateTime       @db.Date @map("end_date")
+  isCurrent     Boolean        @default(false) @map("is_current")
+  createdAt     DateTime       @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt     DateTime       @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  institution   Institution    @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicTerms AcademicTerm[]
+
+  @@unique([institutionId, code])
+  @@index([institutionId])
+  @@index([isCurrent])
+  @@map("academic_years")
+}
+
+model AcademicTerm {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  academicYearId String        @db.Uuid @map("academic_year_id")
+  code           String
+  name           String
+  termType       String        @map("term_type")
+  startDate      DateTime      @db.Date @map("start_date")
+  endDate        DateTime      @db.Date @map("end_date")
+  examStartDate  DateTime?     @db.Date @map("exam_start_date")
+  examEndDate    DateTime?     @db.Date @map("exam_end_date")
+  isCurrent      Boolean       @default(false) @map("is_current")
+  createdAt      DateTime      @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt      DateTime      @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  academicYear   AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  termDateMaps   TermDateMap[]
+
+  @@unique([academicYearId, code])
+  @@index([academicYearId])
+  @@index([isCurrent])
+  @@map("academic_terms")
+}
+
+model Program {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId  String      @db.Uuid @map("institution_id")
+  code           String
+  name           String
+  degree         String
+  departmentName String?     @map("department_name")
+  durationYears  Int         @default(4) @map("duration_years")
+  totalSemesters Int         @default(8) @map("total_semesters")
+  status         String      @default("active")
+  createdAt      DateTime    @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt      DateTime    @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  institution    Institution @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+
+  @@unique([institutionId, code])
+  @@index([institutionId])
+  @@index([degree])
+  @@map("programs")
+}
+
+model Room {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  campusId   String   @db.Uuid @map("campus_id")
+  roomNumber String   @map("room_number")
+  building   String?
+  floor      Int?
+  capacity   Int      @default(60)
+  roomType   String   @default("classroom") @map("room_type")
+  status     String   @default("active")
+  createdAt  DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  campus     Campus   @relation(fields: [campusId], references: [id], onDelete: Restrict)
+
+  @@unique([campusId, roomNumber])
+  @@index([campusId])
+  @@map("rooms")
+}
