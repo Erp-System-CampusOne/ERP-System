@@ -165,6 +165,10 @@ model User {
   credentials      UserCredential[]
   authSessions     AuthSession[]
 
+  // P2 Lifecycle Relations
+  employeeProfile         EmployeeProfile?
+  canonicalStudentProfile StudentProfile?
+
   @@index([role])
 }
 
@@ -188,6 +192,7 @@ model Department {
   faculty        Faculty[]        @relation("DepartmentFaculty")
   courses        Course[]
   timetables     TimetableEntry[]
+  appointments   DepartmentAppointment[]
   expenseRecords ExpenseRecord[]
 }
 
@@ -589,6 +594,9 @@ model AdmissionApplication {
   @@index([status])
   @@index([department])
   @@index([program])
+
+  // P2 Relation (TD-1: Admitted Applications referenced by Program Enrollment)
+  programEnrollments StudentProgramEnrollment[]
 }
 
 // ─── PlacementRecord ──────────────────────────────────────────────────────────
@@ -723,6 +731,11 @@ model Institution {
   academicYears AcademicYear[]
   programs      Program[]
 
+  // P2 Lifecycle Relations
+  employeeProfiles          EmployeeProfile[]
+  studentProfiles           StudentProfile[]
+  studentProgramEnrollments StudentProgramEnrollment[]
+
   @@map("institutions")
 }
 
@@ -739,6 +752,7 @@ model Campus {
 
   institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Restrict)
   rooms         Room[]
+  departmentAppointments DepartmentAppointment[]
 
   @@unique([institutionId, code])
   @@index([institutionId])
@@ -781,6 +795,8 @@ model AcademicTerm {
 
   academicYear   AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
   termDateMaps   TermDateMap[]
+  entryProgramEnrollments StudentProgramEnrollment[]
+  termRegistrations       StudentTermRegistration[]
 
   @@unique([academicYearId, code])
   @@index([academicYearId])
@@ -802,6 +818,7 @@ model Program {
   updatedAt      DateTime    @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
 
   institution    Institution @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  studentProgramEnrollments StudentProgramEnrollment[]
 
   @@unique([institutionId, code])
   @@index([institutionId])
@@ -939,5 +956,168 @@ model AuthSession {
   @@index([expiresAt])
   @@index([userId, isActive])
   @@map("auth_sessions")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  PHASE 2: STUDENT & FACULTY LIFECYCLE (P2.1 - P2.4)
+//  Additive canonical employee, faculty, student identity, enrollment, and progression.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model EmployeeProfile {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                String    @unique @map("user_id")
+  institutionId         String    @db.Uuid @map("institution_id")
+  employeeNumber        String    @map("employee_number")
+  firstName             String    @map("first_name")
+  lastName              String    @map("last_name")
+  employmentType        String    @default("permanent") @map("employment_type")
+  employmentStatus      String    @default("active") @map("employment_status")
+  joinedOn              DateTime  @default(now()) @db.Date @map("joined_on")
+  exitedOn              DateTime? @db.Date @map("exited_on")
+  emergencyContactPhone String?   @map("emergency_contact_phone")
+  createdAt             DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt             DateTime  @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+  deletedAt             DateTime? @db.Timestamptz @map("deleted_at")
+
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  institution            Institution             @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  facultyProfile         FacultyProfile?
+  departmentAppointments DepartmentAppointment[]
+
+  @@unique([institutionId, employeeNumber])
+  @@index([institutionId])
+  @@index([employmentStatus])
+  @@index([employmentType])
+  @@map("employee_profiles")
+}
+
+model FacultyProfile {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeProfileId   String   @unique @db.Uuid @map("employee_profile_id")
+  designation         String
+  qualification       String?
+  specialization      String?
+  weeklyWorkloadHours Decimal  @default(0.0) @db.Decimal(4, 1) @map("weekly_workload_hours")
+  leaveBalance        Decimal  @default(0.0) @db.Decimal(4, 1) @map("leave_balance")
+  createdAt           DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt           DateTime @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  employeeProfile EmployeeProfile @relation(fields: [employeeProfileId], references: [id], onDelete: Restrict)
+
+  @@index([designation])
+  @@map("faculty_profiles")
+}
+
+model DepartmentAppointment {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeProfileId String    @db.Uuid @map("employee_profile_id")
+  departmentId      String    @map("department_id")
+  campusId          String    @db.Uuid @map("campus_id")
+  appointmentRole   String    @default("primary_member") @map("appointment_role")
+  startsOn          DateTime  @default(now()) @db.Date @map("starts_on")
+  endsOn            DateTime? @db.Date @map("ends_on")
+  isActive          Boolean   @default(true) @map("is_active")
+  createdAt         DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt         DateTime  @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  employeeProfile EmployeeProfile @relation(fields: [employeeProfileId], references: [id], onDelete: Restrict)
+  department      Department      @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  campus          Campus          @relation(fields: [campusId], references: [id], onDelete: Restrict)
+
+  @@index([employeeProfileId])
+  @@index([departmentId])
+  @@index([campusId])
+  @@index([appointmentRole, isActive])
+  @@map("department_appointments")
+}
+
+model StudentProfile {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                String    @unique @map("user_id")
+  institutionId         String    @db.Uuid @map("institution_id")
+  studentNumber         String    @map("student_number")
+  firstName             String    @map("first_name")
+  lastName              String    @map("last_name")
+  dateOfBirth           DateTime? @db.Date @map("date_of_birth")
+  gender                String?   @default("unspecified")
+  bloodGroup            String?   @map("blood_group")
+  emergencyContactPhone String?   @map("emergency_contact_phone")
+  status                String    @default("active")
+  createdAt             DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt             DateTime  @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+  deletedAt             DateTime? @db.Timestamptz @map("deleted_at")
+
+  user               User                       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  institution        Institution                @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  programEnrollments StudentProgramEnrollment[]
+
+  @@unique([institutionId, studentNumber])
+  @@index([institutionId])
+  @@index([status])
+  @@index([studentNumber])
+  @@map("student_profiles")
+}
+
+model StudentProgramEnrollment {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentProfileId       String    @db.Uuid @map("student_profile_id")
+  programId              String    @db.Uuid @map("program_id")
+  institutionId          String    @db.Uuid @map("institution_id")
+  entryTermId            String    @db.Uuid @map("entry_term_id")
+  admissionApplicationId String?   @map("admission_application_id")
+  cohortBatch            String    @map("cohort_batch")
+  enrollmentType         String    @default("regular") @map("enrollment_type")
+  enrollmentStatus       String    @default("active") @map("enrollment_status")
+  enrolledOn             DateTime  @db.Date @map("enrolled_on")
+  expectedCompletionDate DateTime? @db.Date @map("expected_completion_date")
+  actualCompletionDate   DateTime? @db.Date @map("actual_completion_date")
+  createdAt              DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt              DateTime  @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+  deletedAt              DateTime? @db.Timestamptz @map("deleted_at")
+
+  studentProfile       StudentProfile            @relation(fields: [studentProfileId], references: [id], onDelete: Restrict)
+  program              Program                   @relation(fields: [programId], references: [id], onDelete: Restrict)
+  institution          Institution               @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  entryTerm            AcademicTerm              @relation(fields: [entryTermId], references: [id], onDelete: Restrict)
+  admissionApplication AdmissionApplication?    @relation(fields: [admissionApplicationId], references: [id], onDelete: Restrict)
+  termRegistrations    StudentTermRegistration[]
+
+  @@index([studentProfileId])
+  @@index([programId])
+  @@index([entryTermId])
+  @@index([enrollmentStatus])
+  @@index([cohortBatch])
+  @@map("student_program_enrollments")
+}
+
+model StudentTermRegistration {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  programEnrollmentId  String    @db.Uuid @map("program_enrollment_id")
+  academicTermId       String    @db.Uuid @map("academic_term_id")
+  semesterNumber       Int       @map("semester_number")
+  section              String?
+  registrationStatus   String    @default("draft") @map("registration_status")
+  registeredOn         DateTime? @db.Date @map("registered_on")
+  completedOn          DateTime? @db.Date @map("completed_on")
+  termGpa              Decimal?  @db.Decimal(4, 2) @map("term_gpa")
+  cumulativeCgpa       Decimal?  @db.Decimal(4, 2) @map("cumulative_cgpa")
+  creditsAttempted     Decimal   @default(0.0) @db.Decimal(4, 1) @map("credits_attempted")
+  creditsEarned        Decimal   @default(0.0) @db.Decimal(4, 1) @map("credits_earned")
+  attendancePercentage Decimal?  @db.Decimal(5, 2) @map("attendance_percentage")
+  academicStanding     String    @default("unspecified") @map("academic_standing")
+  notes                String?
+  createdAt            DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt            DateTime  @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+  deletedAt            DateTime? @db.Timestamptz @map("deleted_at")
+
+  programEnrollment StudentProgramEnrollment @relation(fields: [programEnrollmentId], references: [id], onDelete: Restrict)
+  academicTerm      AcademicTerm             @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+
+  @@unique([programEnrollmentId, academicTermId])
+  @@index([programEnrollmentId])
+  @@index([academicTermId])
+  @@index([registrationStatus])
+  @@index([academicTermId, semesterNumber, section])
+  @@map("student_term_registrations")
 }
 
