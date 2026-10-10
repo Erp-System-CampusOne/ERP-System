@@ -160,6 +160,11 @@ model User {
   borrowedBooks    CirculationRecord[]
   publishedNotices Notice[]
 
+  // P1.3 Security Relations
+  roleAssignments  UserRoleAssignment[]
+  credentials      UserCredential[]
+  authSessions     AuthSession[]
+
   @@index([role])
 }
 
@@ -822,3 +827,117 @@ model Room {
   @@index([campusId])
   @@map("rooms")
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  PHASE 1: IDENTITY & SECURITY FOUNDATION (P1.3)
+//  Additive canonical RBAC, decoupled credentials, and stateful sessions.
+//  Legacy User.role, Permission, and RolePermission remain active.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model AppRole {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique
+  name        String
+  description String?
+  isSystem    Boolean  @default(true) @map("is_system")
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  rolePermissions     AppRolePermission[]
+  userRoleAssignments UserRoleAssignment[]
+
+  @@map("roles")
+}
+
+model AppPermission {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique
+  name        String
+  module      String
+  description String?
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  rolePermissions AppRolePermission[]
+
+  @@index([module])
+  @@map("permissions")
+}
+
+model AppRolePermission {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roleId       String        @db.Uuid @map("role_id")
+  permissionId String        @db.Uuid @map("permission_id")
+  createdAt    DateTime      @default(now()) @db.Timestamptz @map("created_at")
+
+  role         AppRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   AppPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model UserRoleAssignment {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id")
+  roleId    String    @db.Uuid @map("role_id")
+  isActive  Boolean   @default(true) @map("is_active")
+  validFrom DateTime  @default(now()) @db.Timestamptz @map("valid_from")
+  validTo   DateTime? @db.Timestamptz @map("valid_to")
+  createdAt DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt DateTime  @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      AppRole   @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_role_assignments")
+}
+
+model UserCredential {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String    @map("user_id")
+  credentialType      String    @default("password") @map("credential_type")
+  passwordHash        String    @map("password_hash")
+  algorithm           String    @default("bcrypt")
+  passwordChangedAt   DateTime  @default(now()) @db.Timestamptz @map("password_changed_at")
+  requiresChange      Boolean   @default(false) @map("requires_change")
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @db.Timestamptz @map("locked_until")
+  createdAt           DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt           DateTime  @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, credentialType])
+  @@index([userId])
+  @@map("user_credentials")
+}
+
+model AuthSession {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String    @map("user_id")
+  sessionTokenHash String    @unique @map("session_token_hash")
+  ipAddress        String?   @map("ip_address")
+  userAgent        String?   @map("user_agent")
+  isActive         Boolean   @default(true) @map("is_active")
+  expiresAt        DateTime  @db.Timestamptz @map("expires_at")
+  lastActivityAt   DateTime  @default(now()) @db.Timestamptz @map("last_activity_at")
+  revokedAt        DateTime? @db.Timestamptz @map("revoked_at")
+  revocationReason String?   @map("revocation_reason")
+  createdAt        DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt        DateTime  @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionTokenHash])
+  @@index([expiresAt])
+  @@index([userId, isActive])
+  @@map("auth_sessions")
+}
+
