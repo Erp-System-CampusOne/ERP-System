@@ -18,8 +18,11 @@ async function main() {
   // 1. Admin User
   const admin = await prisma.user.upsert({
     where: { email: 'admin@campus.edu' },
-    update: {},
+    update: {
+      campusId: 'COID1001',
+    },
     create: {
+      campusId: 'COID1001',
       email: 'admin@campus.edu',
       name: 'System Admin',
       password,
@@ -31,8 +34,9 @@ async function main() {
   const analyticsPassword = await bcrypt.hash('analytics123', 10);
   await prisma.user.upsert({
     where: { email: 'analytics@campus.edu' },
-    update: { name: 'Dr. Rohan Mehta', password: analyticsPassword, role: 'analytics' },
+    update: { campusId: 'COID1003', name: 'Dr. Rohan Mehta', password: analyticsPassword, role: 'analytics' },
     create: {
+      campusId: 'COID1003',
       email: 'analytics@campus.edu',
       name: 'Dr. Rohan Mehta',
       password: analyticsPassword,
@@ -44,8 +48,11 @@ async function main() {
   const librarianPassword = await bcrypt.hash('librarian123', 10);
   await prisma.user.upsert({
     where: { email: 'librarian@campus.edu' },
-    update: {},
+    update: {
+      campusId: 'COID1004',
+    },
     create: {
+      campusId: 'COID1004',
       email: 'librarian@campus.edu',
       name: 'Anita Sharma',
       password: librarianPassword,
@@ -58,12 +65,14 @@ async function main() {
   await prisma.user.upsert({
     where: { email: 'finance@campus.edu' },
     update: {
+      campusId: 'COID1005',
       name: 'Kavita Iyer',
       password: financePassword,
       role: 'finance_officer',
       phone: '+91-9876543210',
     },
     create: {
+      campusId: 'COID1005',
       email: 'finance@campus.edu',
       name: 'Kavita Iyer',
       password: financePassword,
@@ -86,8 +95,11 @@ async function main() {
   const facultyPassword = await bcrypt.hash('faculty123', 10);
   const facultyUser = await prisma.user.upsert({
     where: { email: 'faculty@campus.edu' },
-    update: {},
+    update: {
+      campusId: 'COID2001',
+    },
     create: {
+      campusId: 'COID2001',
       email: 'faculty@campus.edu',
       name: 'Dr. Priya Menon',
       password: facultyPassword,
@@ -106,8 +118,11 @@ async function main() {
   const hodPassword = await bcrypt.hash('hod123', 10);
   await prisma.user.upsert({
     where: { email: 'hod@campus.edu' },
-    update: {},
+    update: {
+      campusId: 'COID1002',
+    },
     create: {
+      campusId: 'COID1002',
       email: 'hod@campus.edu',
       name: 'Prof. Alistair HOD',
       password: hodPassword,
@@ -126,8 +141,11 @@ async function main() {
   const examinerPassword = await bcrypt.hash('examiner123', 10);
   await prisma.user.upsert({
     where: { email: 'examiner@campus.edu' },
-    update: {},
+    update: {
+      campusId: 'COID1006',
+    },
     create: {
+      campusId: 'COID1006',
       email: 'examiner@campus.edu',
       name: 'Dr. Ethan Examiner',
       password: examinerPassword,
@@ -146,8 +164,11 @@ async function main() {
   const studentPassword = await bcrypt.hash('student123', 10);
   const studentUser = await prisma.user.upsert({
     where: { email: 'student@campus.edu' },
-    update: {},
+    update: {
+      campusId: 'COID3001',
+    },
     create: {
+      campusId: 'COID3001',
       email: 'student@campus.edu',
       name: 'Aryan Sharma',
       password: studentPassword,
@@ -406,8 +427,11 @@ async function main() {
   const student2Password = await bcrypt.hash('student123', 10);
   const student2User = await prisma.user.upsert({
     where: { email: 'priya@campus.edu' },
-    update: {},
+    update: {
+      campusId: 'COID3002',
+    },
     create: {
+      campusId: 'COID3002',
       email: 'priya@campus.edu',
       name: 'Priya Singh',
       password: student2Password,

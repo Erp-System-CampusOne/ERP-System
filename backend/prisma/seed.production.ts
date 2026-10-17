@@ -40,11 +40,13 @@ async function main() {
       email: adminEmail!,
     },
     update: {
+      campusId: process.env.ADMIN_CAMPUS_ID || 'COID1001',
       name: 'System Administrator',
       role: 'admin',
       password,
     },
     create: {
+      campusId: process.env.ADMIN_CAMPUS_ID || 'COID1001',
       email: adminEmail!,
       name: 'System Administrator',
       password,

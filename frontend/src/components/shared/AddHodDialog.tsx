@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDepartments, useCreateAdminUser, useFacultyList, usePromoteFacultyToHod } from '@/features/admin/hooks';
@@ -38,7 +38,7 @@ export function AddHodDialog({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [employeeCode, setEmployeeCode] = useState('');
+  const [employeeCode, setEmployeeCode] = useState(() => `HOD-INST-${Math.floor(100 + Math.random() * 900)}`);
   const [qualification, setQualification] = useState('Ph.D.');
   const [createdCredentials, setCreatedCredentials] = useState<{ id: string; password: string } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -47,13 +47,6 @@ export function AddHodDialog({
 
   // Form states for Mode 2: Promote Existing Faculty
   const [selectedFacultyId, setSelectedFacultyId] = useState('');
-
-  // Auto-suggest employee code
-  useEffect(() => {
-    if (isOpen && !employeeCode) {
-      setEmployeeCode(`HOD-INST-${Math.floor(100 + Math.random() * 900)}`);
-    }
-  }, [isOpen, employeeCode]);
 
   if (user?.role !== 'admin') {
     return null;
@@ -129,7 +122,7 @@ export function AddHodDialog({
     setName('');
     setEmail('');
     setPhone('');
-    setEmployeeCode('');
+    setEmployeeCode(`HOD-INST-${Math.floor(100 + Math.random() * 900)}`);
     setQualification('Ph.D.');
     setCreatedCredentials(null);
     setSelectedFacultyId('');
@@ -145,6 +138,9 @@ export function AddHodDialog({
       open={isOpen}
       onOpenChange={(open: boolean) => {
         setIsOpen(open);
+        if (open && !employeeCode) {
+          setEmployeeCode(`HOD-INST-${Math.floor(100 + Math.random() * 900)}`);
+        }
         if (!open) setTimeout(resetForm, 200);
       }}
     >

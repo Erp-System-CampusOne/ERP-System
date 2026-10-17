@@ -104,11 +104,24 @@ const FIXTURES = {
   noticeId: null
 };
 
+async function getUniqueCampusId() {
+  let isUnique = false;
+  let campusId = '';
+  while (!isUnique) {
+    campusId = `COID${Math.floor(1000 + Math.random() * 9000)}`;
+    const existing = await prisma.user.findUnique({ where: { campusId } });
+    if (!existing) isUnique = true;
+  }
+  return campusId;
+}
+
 async function createAuthenticatedUser(email, name, role, roles = [role]) {
   const plainPassword = 'Password123!';
   const passwordHash = await bcrypt.hash(plainPassword, 10);
+  const campusId = await getUniqueCampusId();
   const user = await prisma.user.create({
     data: {
+      campusId,
       email,
       name,
       password: passwordHash,

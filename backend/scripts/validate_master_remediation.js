@@ -119,6 +119,17 @@ async function createAuthenticatedSession(userId, role, roles = [role]) {
   };
 }
 
+async function getUniqueCampusId() {
+  let isUnique = false;
+  let campusId = '';
+  while (!isUnique) {
+    campusId = `COID${Math.floor(1000 + Math.random() * 9000)}`;
+    const existing = await prisma.user.findUnique({ where: { campusId } });
+    if (!existing) isUnique = true;
+  }
+  return campusId;
+}
+
 async function main() {
   console.log('==============================================================================');
   console.log(' CampusOne ERP — Master Remediation & Architecture Alignment Test Runner');
@@ -223,6 +234,7 @@ async function main() {
     const adminPassword = await bcrypt.hash('admin123', 10);
     const adminUser = await prisma.user.create({
       data: {
+        campusId: await getUniqueCampusId(),
         name: 'Master Admin',
         email: `master_admin_${Date.now()}@campusone.test`,
         password: adminPassword,
@@ -442,6 +454,7 @@ async function main() {
     // Setup another student (Student Alice) for cohort privacy verification
     const aliceUser = await prisma.user.create({
       data: {
+        campusId: await getUniqueCampusId(),
         name: 'Alice Student',
         email: `student_alice_${Date.now()}@campusone.test`,
         password: adminPassword,
@@ -524,6 +537,7 @@ async function main() {
     // 1. Finance Officer User
     const financeUser = await prisma.user.create({
       data: {
+        campusId: await getUniqueCampusId(),
         name: 'Frank Finance',
         email: `finance_frank_${Date.now()}@campusone.test`,
         password: adminPassword,
@@ -549,6 +563,7 @@ async function main() {
     // 2. Library Workflows
     const librarianUser = await prisma.user.create({
       data: {
+        campusId: await getUniqueCampusId(),
         name: 'Lucy Librarian',
         email: `librarian_lucy_${Date.now()}@campusone.test`,
         password: adminPassword,
@@ -603,6 +618,7 @@ async function main() {
     // 3. Analytics Workflows
     const analyticsUser = await prisma.user.create({
       data: {
+        campusId: await getUniqueCampusId(),
         name: 'Anna Analytics',
         email: `analytics_anna_${Date.now()}@campusone.test`,
         password: adminPassword,

@@ -123,6 +123,7 @@ const SYNTHETIC_FIXTURES = {
   },
   student: {
     id: 'aaaaaaaa-1111-2222-3333-444444444444',
+    campusId: 'COID9001',
     email: 'synth.student.p29@campus.test',
     passwordPlain: generateDynamicPassword(),
     name: 'Synthetic Student',
@@ -131,6 +132,7 @@ const SYNTHETIC_FIXTURES = {
   },
   faculty: {
     id: 'bbbbbbbb-1111-2222-3333-444444444444',
+    campusId: 'COID9002',
     email: 'synth.faculty.p29@campus.test',
     passwordPlain: generateDynamicPassword(),
     name: 'Synthetic Faculty',
@@ -139,6 +141,7 @@ const SYNTHETIC_FIXTURES = {
   },
   admin: {
     id: 'cccccccc-1111-2222-3333-444444444444',
+    campusId: 'COID9003',
     email: 'synth.admin.p29@campus.test',
     passwordPlain: generateDynamicPassword(),
     name: 'Synthetic Administrator',
@@ -146,6 +149,7 @@ const SYNTHETIC_FIXTURES = {
   },
   legacy: {
     id: 'dddddddd-1111-2222-3333-444444444444',
+    campusId: 'COID9004',
     email: 'synth.legacy.p29@campus.test',
     passwordPlain: generateDynamicPassword(),
     name: 'Synthetic Legacy User',
@@ -235,9 +239,9 @@ async function runHardenedSecurityAudit() {
       if (key === 'department') continue;
       const hash = await bcrypt.hash(fixture.passwordPlain, 10);
       await pgClient.query(`
-        INSERT INTO "User" ("id", "email", "name", "password", "role", "updatedAt")
-        VALUES ($1, $2, $3, $4, $5, NOW());
-      `, [fixture.id, fixture.email, fixture.name, hash, fixture.role]);
+        INSERT INTO "User" ("id", "campusId", "email", "name", "password", "role", "updatedAt")
+        VALUES ($1, $2, $3, $4, $5, $6, NOW());
+      `, [fixture.id, fixture.campusId, fixture.email, fixture.name, hash, fixture.role]);
     }
 
     // 5. Attach profiles to synthetic student and faculty
@@ -261,11 +265,16 @@ async function runHardenedSecurityAudit() {
 
     const studentFixture = SYNTHETIC_FIXTURES.student;
 
+    // T00: Email login is rejected as disabled
+    const t00EmailRes = await verifyCredentials(studentFixture.email, studentFixture.passwordPlain);
+    assert(t00EmailRes.success === false, 'T00-A: Email login is rejected as disabled');
+    assert(t00EmailRes.error && t00EmailRes.error.includes('Email login is disabled'), 'T00-B: Rejection error message instructs to use CampusOne ID');
+
     // T01: Legacy password login triggers lazy backfill
     const t01CredPre = await pgClient.query(`SELECT count(*) FROM "user_credentials" WHERE "user_id" = $1;`, [studentFixture.id]);
     assert(parseInt(t01CredPre.rows[0].count, 10) === 0, 'T01-A: Zero canonical credentials exist before first login');
 
-    const t01Res = await verifyCredentials(studentFixture.email, studentFixture.passwordPlain);
+    const t01Res = await verifyCredentials(studentFixture.campusId, studentFixture.passwordPlain);
     assert(t01Res.success === true, 'T01-B: Legacy password verification succeeds');
     assert(t01Res.source === 'legacy', 'T01-C: Verification source correctly identified as legacy fallback');
 
@@ -278,12 +287,12 @@ async function runHardenedSecurityAudit() {
     assert(t01CredPost.rows[0].failed_login_attempts === 0, 'T01-F: Initial failed attempts is 0');
 
     // T02: Canonical credential verification on subsequent login
-    const t02Res = await verifyCredentials(studentFixture.email, studentFixture.passwordPlain);
+    const t02Res = await verifyCredentials(studentFixture.campusId, studentFixture.passwordPlain);
     assert(t02Res.success === true, 'T02-A: Subsequent login succeeds via canonical credential record');
     assert(t02Res.source === 'canonical', 'T02-B: Verification source correctly identified as canonical');
 
     // T03: Failed password accounting and generic error response
-    const t03Res = await verifyCredentials(studentFixture.email, generateDynamicPassword() + '_wrong');
+    const t03Res = await verifyCredentials(studentFixture.campusId, generateDynamicPassword() + '_wrong');
     assert(t03Res.success === false, 'T03-A: Wrong password rejected');
     assert(t03Res.error === 'Invalid credentials', 'T03-B: Generic enumeration-safe error returned');
 
@@ -291,10 +300,10 @@ async function runHardenedSecurityAudit() {
     assert(t03Count.rows[0].failed_login_attempts === 1, 'T03-C: failed_login_attempts incremented to 1');
 
     // T04: Brute-force lockout after 5 consecutive failures
-    await verifyCredentials(studentFixture.email, generateDynamicPassword() + '_wrong');
-    await verifyCredentials(studentFixture.email, generateDynamicPassword() + '_wrong');
-    await verifyCredentials(studentFixture.email, generateDynamicPassword() + '_wrong');
-    const t04LockoutRes = await verifyCredentials(studentFixture.email, generateDynamicPassword() + '_wrong');
+    await verifyCredentials(studentFixture.campusId, generateDynamicPassword() + '_wrong');
+    await verifyCredentials(studentFixture.campusId, generateDynamicPassword() + '_wrong');
+    await verifyCredentials(studentFixture.campusId, generateDynamicPassword() + '_wrong');
+    const t04LockoutRes = await verifyCredentials(studentFixture.campusId, generateDynamicPassword() + '_wrong');
 
     assert(t04LockoutRes.success === false, 'T04-A: 5th failed attempt rejected');
     assert(t04LockoutRes.locked === true, 'T04-B: Account flagged as locked on 5th failure');
@@ -303,7 +312,7 @@ async function runHardenedSecurityAudit() {
     assert(t04DbLock.rows[0].failed_login_attempts >= 5, 'T04-C: failed_login_attempts reached threshold (>= 5)');
     assert(t04DbLock.rows[0].locked_until !== null, 'T04-D: locked_until timestamp set in database');
 
-    const t04BlockedCorrect = await verifyCredentials(studentFixture.email, studentFixture.passwordPlain);
+    const t04BlockedCorrect = await verifyCredentials(studentFixture.campusId, studentFixture.passwordPlain);
     assert(t04BlockedCorrect.locked === true, 'T04-E: Correct password rejected while locked_until is active');
 
     // T05: Lockout expiration and recovery
@@ -313,7 +322,7 @@ async function runHardenedSecurityAudit() {
       WHERE "user_id" = $1;
     `, [studentFixture.id, new Date(Date.now() - 60000)]);
 
-    const t05Recovery = await verifyCredentials(studentFixture.email, studentFixture.passwordPlain);
+    const t05Recovery = await verifyCredentials(studentFixture.campusId, studentFixture.passwordPlain);
     assert(t05Recovery.success === true, 'T05-A: Successful login permitted after locked_until expires');
 
     const t05ResetCheck = await pgClient.query(`SELECT "failed_login_attempts", "locked_until" FROM "user_credentials" WHERE "user_id" = $1;`, [studentFixture.id]);
@@ -322,11 +331,11 @@ async function runHardenedSecurityAudit() {
 
     // T06: Concurrency safety for failed attempts
     await Promise.all([
-      verifyCredentials(studentFixture.email, generateDynamicPassword() + '_concurrent_wrong'),
-      verifyCredentials(studentFixture.email, generateDynamicPassword() + '_concurrent_wrong'),
-      verifyCredentials(studentFixture.email, generateDynamicPassword() + '_concurrent_wrong'),
-      verifyCredentials(studentFixture.email, generateDynamicPassword() + '_concurrent_wrong'),
-      verifyCredentials(studentFixture.email, generateDynamicPassword() + '_concurrent_wrong')
+      verifyCredentials(studentFixture.campusId, generateDynamicPassword() + '_concurrent_wrong'),
+      verifyCredentials(studentFixture.campusId, generateDynamicPassword() + '_concurrent_wrong'),
+      verifyCredentials(studentFixture.campusId, generateDynamicPassword() + '_concurrent_wrong'),
+      verifyCredentials(studentFixture.campusId, generateDynamicPassword() + '_concurrent_wrong'),
+      verifyCredentials(studentFixture.campusId, generateDynamicPassword() + '_concurrent_wrong')
     ]);
 
     const t06ConcCount = await pgClient.query(`SELECT "failed_login_attempts", "locked_until" FROM "user_credentials" WHERE "user_id" = $1;`, [studentFixture.id]);
@@ -338,9 +347,9 @@ async function runHardenedSecurityAudit() {
     await pgClient.query(`DELETE FROM "user_credentials" WHERE "user_id" = $1;`, [facultyFixture.id]);
 
     const concBackfillResults = await Promise.all([
-      verifyCredentials(facultyFixture.email, facultyFixture.passwordPlain),
-      verifyCredentials(facultyFixture.email, facultyFixture.passwordPlain),
-      verifyCredentials(facultyFixture.email, facultyFixture.passwordPlain)
+      verifyCredentials(facultyFixture.campusId, facultyFixture.passwordPlain),
+      verifyCredentials(facultyFixture.campusId, facultyFixture.passwordPlain),
+      verifyCredentials(facultyFixture.campusId, facultyFixture.passwordPlain)
     ]);
     assert(concBackfillResults.every(r => r.success === true), 'T07-A: All concurrent backfill logins succeed');
 
@@ -360,10 +369,10 @@ async function runHardenedSecurityAudit() {
     const canonMatchesNew = await bcrypt.compare(newTestPassword, t08CanonHash.rows[0].password_hash);
     assert(legacyMatchesNew && canonMatchesNew, 'T08-A: Dual-write synchronized password in BOTH User and user_credentials');
 
-    const t08OldFail = await verifyCredentials(studentFixture.email, studentFixture.passwordPlain);
+    const t08OldFail = await verifyCredentials(studentFixture.campusId, studentFixture.passwordPlain);
     assert(t08OldFail.success === false, 'T08-B: Login with old password rejected');
 
-    const t08NewSuccess = await verifyCredentials(studentFixture.email, newTestPassword);
+    const t08NewSuccess = await verifyCredentials(studentFixture.campusId, newTestPassword);
     assert(t08NewSuccess.success === true, 'T08-C: Login with new synchronized password succeeds');
 
     const sessionAfterPwdChange = await validateSession(activeSessionPrior.sessionId, studentFixture.id);
@@ -375,7 +384,7 @@ async function runHardenedSecurityAudit() {
 
     // Send 5 wrong password attempts to an un-migrated account
     for (let i = 1; i <= 5; i++) {
-      await verifyCredentials(legacyFixture.email, generateDynamicPassword() + '_wrong');
+      await verifyCredentials(legacyFixture.campusId, generateDynamicPassword() + '_wrong');
     }
 
     const t09LegacyLock = await pgClient.query(`
@@ -387,8 +396,8 @@ async function runHardenedSecurityAudit() {
 
     // T10: Lockout window cannot be pushed further by spammed requests during active lock
     const lockedUntilInitial = t09LegacyLock.rows[0].locked_until.getTime();
-    await verifyCredentials(legacyFixture.email, generateDynamicPassword() + '_spam');
-    await verifyCredentials(legacyFixture.email, generateDynamicPassword() + '_spam');
+    await verifyCredentials(legacyFixture.campusId, generateDynamicPassword() + '_spam');
+    await verifyCredentials(legacyFixture.campusId, generateDynamicPassword() + '_spam');
 
     const t10LockAfterSpam = await pgClient.query(`SELECT "locked_until" FROM "user_credentials" WHERE "user_id" = $1;`, [legacyFixture.id]);
     assert(t10LockAfterSpam.rows[0].locked_until.getTime() === lockedUntilInitial, 'T10: Lockout duration remains bounded and cannot be spammed indefinitely (Anti-DoS)');
@@ -451,7 +460,7 @@ async function runHardenedSecurityAudit() {
 
     // T15: Full loginUser endpoint flow
     const mockLoginReq = {
-      body: { identifier: studentFixture.email, password: newTestPassword },
+      body: { identifier: studentFixture.campusId, password: newTestPassword },
       headers: { 'user-agent': 'SyntheticClient/1.0' },
       ip: '127.0.0.1'
     };
