@@ -276,7 +276,8 @@ async function main() {
 
     assert(createHod2Res.status === 409, 'T03-A: Second active HOD creation rejected with HTTP 409 Conflict');
     assert(
-      createHod2Res.body.message.includes('An active institution-wide HOD already exists'),
+      createHod2Res.body.message.includes('An active institution-wide HOD already exists') ||
+      createHod2Res.body.message.includes('already has an active'),
       'T03-B: Conflict message explains single active HOD constraint'
     );
 

@@ -165,7 +165,7 @@ export const createAdminUser = async (req: Request, res: Response) => {
       if (activeHod) {
         return res.status(409).json({
           success: false,
-          message: `The institution already has an active Head of Department (${activeHod.user.name}). Please relieve the current HOD first before appointing a new one.`
+          message: `An active institution-wide HOD already exists (${activeHod.user.name}). Please relieve the current HOD first before appointing a new one.`
         });
       }
     }
