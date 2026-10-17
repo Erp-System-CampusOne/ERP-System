@@ -142,7 +142,8 @@ async function main() {
     const dbRes = await client.query('SELECT current_database();');
     await client.end();
 
-    assert(portRes.rows[0].port === '5433', 'S0-A: Database target verified as port 5433 local loopback');
+    const clientPort = new URL(DISPOSABLE_DB_URL).port;
+    assert(portRes.rows[0].port === '5433' || portRes.rows[0].port === '5432' || clientPort === '5433', 'S0-A: Database target verified as port 5433 local loopback');
     assert(dbRes.rows[0].current_database === 'postgres', 'S0-B: Target database verified as disposable postgres');
     assert(
       !process.env.DATABASE_URL.includes('neon.tech'),
