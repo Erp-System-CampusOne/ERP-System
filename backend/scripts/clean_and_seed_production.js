@@ -13,7 +13,14 @@ async function seedDatabase(connectionString, label) {
   try {
     await client.query('BEGIN;');
 
-    console.log(`[${label}] 1. Purging existing database tables...`);
+    console.log(`[${label}] 1. Purging existing database tables and ensuring schema...`);
+
+    // Ensure campusId column exists
+    await client.query(`
+      ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "campusId" TEXT;
+      CREATE UNIQUE INDEX IF NOT EXISTS "User_campusId_key" ON "User"("campusId");
+      CREATE INDEX IF NOT EXISTS "User_campusId_idx" ON "User"("campusId");
+    `);
 
     // Detach circular references on Department
     await client.query('UPDATE "Department" SET "headOfDepartmentId" = NULL;');
@@ -130,10 +137,10 @@ async function seedDatabase(connectionString, label) {
     const eceDept = (await client.query("SELECT id, code, name FROM \"Department\" WHERE code='ECE';")).rows[0];
     const mechDept = (await client.query("SELECT id, code, name FROM \"Department\" WHERE code='MECH';")).rows[0];
 
-    console.log(`[${label}] 5. Seeding Admin Account...`);
+    console.log(`[${label}] 5. Seeding Admin Account (COID1001)...`);
     const adminUserRes = await client.query(`
-      INSERT INTO "User" (id, email, name, password, role, "createdAt", "updatedAt")
-      VALUES (gen_random_uuid()::text, 'admin@campus.edu', 'System Administrator', $1, 'admin', NOW(), NOW())
+      INSERT INTO "User" (id, "campusId", email, name, password, role, "createdAt", "updatedAt")
+      VALUES (gen_random_uuid()::text, 'COID1001', 'admin@campus.edu', 'System Administrator', $1, 'admin', NOW(), NOW())
       RETURNING id;
     `, [adminPasswordHash]);
     const adminUserId = adminUserRes.rows[0].id;
@@ -148,11 +155,11 @@ async function seedDatabase(connectionString, label) {
       VALUES ($1, $2, true, NOW());
     `, [adminUserId, roleIdMap['admin']]);
 
-    console.log(`[${label}] 6. Seeding Executive Accounts (Analytics, Librarian, Finance Officer)...`);
+    console.log(`[${label}] 6. Seeding Executive Accounts (COID1003, COID1004, COID1005)...`);
     // 1 Analytics
     const analyticsRes = await client.query(`
-      INSERT INTO "User" (id, email, name, password, role, "createdAt", "updatedAt")
-      VALUES (gen_random_uuid()::text, 'analytics@campus.edu', 'Dr. Rohan Mehta', $1, 'analytics', NOW(), NOW())
+      INSERT INTO "User" (id, "campusId", email, name, password, role, "createdAt", "updatedAt")
+      VALUES (gen_random_uuid()::text, 'COID1003', 'analytics@campus.edu', 'Dr. Rohan Mehta', $1, 'analytics', NOW(), NOW())
       RETURNING id;
     `, [analyticsPasswordHash]);
     await client.query(`INSERT INTO user_credentials (user_id, credential_type, password_hash, algorithm) VALUES ($1, 'password', $2, 'bcrypt');`, [analyticsRes.rows[0].id, analyticsPasswordHash]);
@@ -160,8 +167,8 @@ async function seedDatabase(connectionString, label) {
 
     // 1 Librarian
     const libRes = await client.query(`
-      INSERT INTO "User" (id, email, name, password, role, "createdAt", "updatedAt")
-      VALUES (gen_random_uuid()::text, 'librarian@campus.edu', 'Anita Sharma', $1, 'librarian', NOW(), NOW())
+      INSERT INTO "User" (id, "campusId", email, name, password, role, "createdAt", "updatedAt")
+      VALUES (gen_random_uuid()::text, 'COID1004', 'librarian@campus.edu', 'Anita Sharma', $1, 'librarian', NOW(), NOW())
       RETURNING id;
     `, [librarianPasswordHash]);
     await client.query(`INSERT INTO user_credentials (user_id, credential_type, password_hash, algorithm) VALUES ($1, 'password', $2, 'bcrypt');`, [libRes.rows[0].id, librarianPasswordHash]);
@@ -169,17 +176,17 @@ async function seedDatabase(connectionString, label) {
 
     // 1 Finance Officer
     const finRes = await client.query(`
-      INSERT INTO "User" (id, email, name, password, role, phone, "createdAt", "updatedAt")
-      VALUES (gen_random_uuid()::text, 'finance@campus.edu', 'Kavita Iyer', $1, 'finance_officer', '+91-9876543210', NOW(), NOW())
+      INSERT INTO "User" (id, "campusId", email, name, password, role, phone, "createdAt", "updatedAt")
+      VALUES (gen_random_uuid()::text, 'COID1005', 'finance@campus.edu', 'Kavita Iyer', $1, 'finance_officer', '+91-9876543210', NOW(), NOW())
       RETURNING id;
     `, [financePasswordHash]);
     await client.query(`INSERT INTO user_credentials (user_id, credential_type, password_hash, algorithm) VALUES ($1, 'password', $2, 'bcrypt');`, [finRes.rows[0].id, financePasswordHash]);
     await client.query(`INSERT INTO user_role_assignments (user_id, role_id, is_active, valid_from) VALUES ($1, $2, true, NOW());`, [finRes.rows[0].id, roleIdMap['finance_officer']]);
 
-    console.log(`[${label}] 7. Seeding 1 Single Institution HOD (Dr. Sarah Jenkins - Institution Head of Department)...`);
+    console.log(`[${label}] 7. Seeding 1 Single Institution HOD (Dr. Sarah Jenkins - COID1002)...`);
     const hodUserRes = await client.query(`
-      INSERT INTO "User" (id, email, name, password, role, phone, "createdAt", "updatedAt")
-      VALUES (gen_random_uuid()::text, 'hod@campus.edu', 'Dr. Sarah Jenkins', $1, 'hod', '+91 98450 11223', NOW(), NOW())
+      INSERT INTO "User" (id, "campusId", email, name, password, role, phone, "createdAt", "updatedAt")
+      VALUES (gen_random_uuid()::text, 'COID1002', 'hod@campus.edu', 'Dr. Sarah Jenkins', $1, 'hod', '+91 98450 11223', NOW(), NOW())
       RETURNING id;
     `, [hodPasswordHash]);
     const hodUserId = hodUserRes.rows[0].id;
@@ -199,22 +206,22 @@ async function seedDatabase(connectionString, label) {
       VALUES ($1, $2, true, NOW());
     `, [institutionId, hodUserId]);
 
-    console.log(`[${label}] 8. Seeding 5 Faculty Members...`);
+    console.log(`[${label}] 8. Seeding 5 Faculty Members (COID2001 - COID2005)...`);
     const facultyDefs = [
-      { email: 'faculty.sharma@campus.edu', name: 'Prof. Rajesh Sharma', code: 'FAC-CSE-001', deptId: cseDept.id, desig: 'Professor', qual: 'Ph.D. in Distributed Systems', hours: 14 },
-      { email: 'faculty.iyer@campus.edu', name: 'Dr. Meera Iyer', code: 'FAC-CSE-002', deptId: cseDept.id, desig: 'Associate Professor', qual: 'Ph.D. in AI & Machine Learning', hours: 16 },
-      { email: 'faculty.verma@campus.edu', name: 'Dr. Amit Verma', code: 'FAC-CSE-003', deptId: cseDept.id, desig: 'Associate Professor', qual: 'Ph.D. in Algorithms & Complexity', hours: 16 },
-      { email: 'faculty.gupta@campus.edu', name: 'Prof. Vikram Gupta', code: 'FAC-ECE-001', deptId: eceDept.id, desig: 'Assistant Professor', qual: 'M.Tech in VLSI Systems', hours: 18 },
-      { email: 'faculty.nair@campus.edu', name: 'Dr. Ananya Nair', code: 'FAC-MECH-001', deptId: mechDept.id, desig: 'Assistant Professor', qual: 'Ph.D. in Robotics & Mechatronics', hours: 18 },
+      { campusId: 'COID2001', email: 'faculty.sharma@campus.edu', name: 'Prof. Rajesh Sharma', code: 'FAC-CSE-001', deptId: cseDept.id, desig: 'Professor', qual: 'Ph.D. in Distributed Systems', hours: 14 },
+      { campusId: 'COID2002', email: 'faculty.iyer@campus.edu', name: 'Dr. Meera Iyer', code: 'FAC-CSE-002', deptId: cseDept.id, desig: 'Associate Professor', qual: 'Ph.D. in AI & Machine Learning', hours: 16 },
+      { campusId: 'COID2003', email: 'faculty.verma@campus.edu', name: 'Dr. Amit Verma', code: 'FAC-CSE-003', deptId: cseDept.id, desig: 'Associate Professor', qual: 'Ph.D. in Algorithms & Complexity', hours: 16 },
+      { campusId: 'COID2004', email: 'faculty.gupta@campus.edu', name: 'Prof. Vikram Gupta', code: 'FAC-ECE-001', deptId: eceDept.id, desig: 'Assistant Professor', qual: 'M.Tech in VLSI Systems', hours: 18 },
+      { campusId: 'COID2005', email: 'faculty.nair@campus.edu', name: 'Dr. Ananya Nair', code: 'FAC-MECH-001', deptId: mechDept.id, desig: 'Assistant Professor', qual: 'Ph.D. in Robotics & Mechatronics', hours: 18 },
     ];
 
     const facultyMap = {};
     for (const f of facultyDefs) {
       const uRes = await client.query(`
-        INSERT INTO "User" (id, email, name, password, role, "createdAt", "updatedAt")
-        VALUES (gen_random_uuid()::text, $1, $2, $3, 'faculty', NOW(), NOW())
+        INSERT INTO "User" (id, "campusId", email, name, password, role, "createdAt", "updatedAt")
+        VALUES (gen_random_uuid()::text, $1, $2, $3, $4, 'faculty', NOW(), NOW())
         RETURNING id;
-      `, [f.email, f.name, facultyPasswordHash]);
+      `, [f.campusId, f.email, f.name, facultyPasswordHash]);
       const uid = uRes.rows[0].id;
 
       await client.query(`INSERT INTO user_credentials (user_id, credential_type, password_hash, algorithm) VALUES ($1, 'password', $2, 'bcrypt');`, [uid, facultyPasswordHash]);
@@ -229,27 +236,27 @@ async function seedDatabase(connectionString, label) {
       facultyMap[f.code] = facRes.rows[0].id;
     }
 
-    console.log(`[${label}] 9. Seeding 10 Students...`);
+    console.log(`[${label}] 9. Seeding 10 Students (COID3001 - COID3010)...`);
     const studentDefs = [
-      { email: 'student.aarav@campus.edu', name: 'Aarav Patel', roll: '22CS001', sem: 4, sec: 'A', batch: '2024-2028', cgpa: 8.85, att: 92.5, feeStatus: 'paid', quota: 'general' },
-      { email: 'student.diya@campus.edu', name: 'Diya Sen', roll: '22CS002', sem: 4, sec: 'A', batch: '2024-2028', cgpa: 9.20, att: 96.0, feeStatus: 'paid', quota: 'merit' },
-      { email: 'student.rohan@campus.edu', name: 'Rohan Kulkarni', roll: '22CS003', sem: 4, sec: 'A', batch: '2024-2028', cgpa: 7.60, att: 82.0, feeStatus: 'due', quota: 'general' },
-      { email: 'student.ananya@campus.edu', name: 'Ananya Roy', roll: '22CS004', sem: 4, sec: 'A', batch: '2024-2028', cgpa: 8.40, att: 88.5, feeStatus: 'paid', quota: 'general' },
-      { email: 'student.kabir@campus.edu', name: 'Kabir Das', roll: '22CS005', sem: 4, sec: 'B', batch: '2024-2028', cgpa: 6.95, att: 74.0, feeStatus: 'due', quota: 'management' },
-      { email: 'student.ishaan@campus.edu', name: 'Ishaan Reddy', roll: '22CS006', sem: 4, sec: 'B', batch: '2024-2028', cgpa: 8.10, att: 90.0, feeStatus: 'partial', quota: 'general' },
-      { email: 'student.tanvi@campus.edu', name: 'Tanvi Joshi', roll: '22CS007', sem: 4, sec: 'B', batch: '2024-2028', cgpa: 9.50, att: 98.0, feeStatus: 'paid', quota: 'merit' },
-      { email: 'student.aditya@campus.edu', name: 'Aditya Rao', roll: '22CS008', sem: 2, sec: 'A', batch: '2025-2029', cgpa: 8.30, att: 85.0, feeStatus: 'paid', quota: 'general' },
-      { email: 'student.zoya@campus.edu', name: 'Zoya Khan', roll: '22CS009', sem: 2, sec: 'A', batch: '2025-2029', cgpa: 7.80, att: 80.5, feeStatus: 'due', quota: 'general' },
-      { email: 'student.varun@campus.edu', name: 'Varun Nair', roll: '22CS010', sem: 6, sec: 'A', batch: '2023-2027', cgpa: 8.90, att: 91.0, feeStatus: 'paid', quota: 'general' },
+      { campusId: 'COID3001', email: 'student.aarav@campus.edu', name: 'Aarav Patel', roll: '22CS001', sem: 4, sec: 'A', batch: '2024-2028', cgpa: 8.85, att: 92.5, feeStatus: 'paid', quota: 'general' },
+      { campusId: 'COID3002', email: 'student.diya@campus.edu', name: 'Diya Sen', roll: '22CS002', sem: 4, sec: 'A', batch: '2024-2028', cgpa: 9.20, att: 96.0, feeStatus: 'paid', quota: 'merit' },
+      { campusId: 'COID3003', email: 'student.rohan@campus.edu', name: 'Rohan Kulkarni', roll: '22CS003', sem: 4, sec: 'A', batch: '2024-2028', cgpa: 7.60, att: 82.0, feeStatus: 'due', quota: 'general' },
+      { campusId: 'COID3004', email: 'student.ananya@campus.edu', name: 'Ananya Roy', roll: '22CS004', sem: 4, sec: 'A', batch: '2024-2028', cgpa: 8.40, att: 88.5, feeStatus: 'paid', quota: 'general' },
+      { campusId: 'COID3005', email: 'student.kabir@campus.edu', name: 'Kabir Das', roll: '22CS005', sem: 4, sec: 'B', batch: '2024-2028', cgpa: 6.95, att: 74.0, feeStatus: 'due', quota: 'management' },
+      { campusId: 'COID3006', email: 'student.ishaan@campus.edu', name: 'Ishaan Reddy', roll: '22CS006', sem: 4, sec: 'B', batch: '2024-2028', cgpa: 8.10, att: 90.0, feeStatus: 'partial', quota: 'general' },
+      { campusId: 'COID3007', email: 'student.tanvi@campus.edu', name: 'Tanvi Joshi', roll: '22CS007', sem: 4, sec: 'B', batch: '2024-2028', cgpa: 9.50, att: 98.0, feeStatus: 'paid', quota: 'merit' },
+      { campusId: 'COID3008', email: 'student.aditya@campus.edu', name: 'Aditya Rao', roll: '22CS008', sem: 2, sec: 'A', batch: '2025-2029', cgpa: 8.30, att: 85.0, feeStatus: 'paid', quota: 'general' },
+      { campusId: 'COID3009', email: 'student.zoya@campus.edu', name: 'Zoya Khan', roll: '22CS009', sem: 2, sec: 'A', batch: '2025-2029', cgpa: 7.80, att: 80.5, feeStatus: 'due', quota: 'general' },
+      { campusId: 'COID3010', email: 'student.varun@campus.edu', name: 'Varun Nair', roll: '22CS010', sem: 6, sec: 'A', batch: '2023-2027', cgpa: 8.90, att: 91.0, feeStatus: 'paid', quota: 'general' },
     ];
 
     const studentIdMap = {};
     for (const s of studentDefs) {
       const uRes = await client.query(`
-        INSERT INTO "User" (id, email, name, password, role, "createdAt", "updatedAt")
-        VALUES (gen_random_uuid()::text, $1, $2, $3, 'student', NOW(), NOW())
+        INSERT INTO "User" (id, "campusId", email, name, password, role, "createdAt", "updatedAt")
+        VALUES (gen_random_uuid()::text, $1, $2, $3, $4, 'student', NOW(), NOW())
         RETURNING id;
-      `, [s.email, s.name, studentPasswordHash]);
+      `, [s.campusId, s.email, s.name, studentPasswordHash]);
       const uid = uRes.rows[0].id;
 
       await client.query(`INSERT INTO user_credentials (user_id, credential_type, password_hash, algorithm) VALUES ($1, 'password', $2, 'bcrypt');`, [uid, studentPasswordHash]);

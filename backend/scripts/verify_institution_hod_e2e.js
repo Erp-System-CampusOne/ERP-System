@@ -60,9 +60,9 @@ function getJson(urlPath, token = null) {
 }
 
 async function run() {
-  console.log('=== Step 1: Admin Login ===');
+  console.log('=== Step 1: Admin Login (COID1001) ===');
   const adminLogin = await postJson('/api/auth/login', {
-    identifier: 'admin@campus.edu',
+    identifier: 'COID1001',
     password: 'Admin123!'
   });
   if (adminLogin.status !== 200) {
@@ -143,10 +143,10 @@ async function run() {
 
   console.log('\n=== Step 8: Test Institution HOD Dashboard Login & API Access ===');
   const hodLogin = await postJson('/api/auth/login', {
-    identifier: 'hod@campus.edu',
+    identifier: 'COID1002',
     password: 'Hod123!'
   });
-  console.log('HOD login status:', hodLogin.status, 'Role:', hodLogin.data?.user?.role);
+  console.log('HOD login status:', hodLogin.status, 'Role:', hodLogin.data?.user?.role, `(CampusOne ID: ${hodLogin.data?.user?.campusId})`);
   if (hodLogin.status !== 200 || hodLogin.data.user.role !== 'hod') {
     console.error('HOD login failed:', hodLogin);
     process.exit(1);
@@ -169,21 +169,30 @@ async function run() {
     process.exit(1);
   }
 
-  console.log('\n=== Step 9: Verify All Single Institution Roles Can Authenticate ===');
+  console.log('\n=== Step 9: Verify All Single Institution Roles Authenticate via CampusOne ID ===');
   const rolesToVerify = [
-    { name: 'Admin', email: 'admin@campus.edu', pass: 'Admin123!', role: 'admin' },
-    { name: 'Institution HOD', email: 'hod@campus.edu', pass: 'Hod123!', role: 'hod' },
-    { name: 'Librarian', email: 'librarian@campus.edu', pass: 'Librarian123!', role: 'librarian' },
-    { name: 'Finance Officer', email: 'finance@campus.edu', pass: 'Finance123!', role: 'finance_officer' },
-    { name: 'Analytics Officer', email: 'analytics@campus.edu', pass: 'Analytics123!', role: 'analytics' }
+    { name: 'Admin', campusId: 'COID1001', email: 'admin@campus.edu', pass: 'Admin123!', role: 'admin' },
+    { name: 'Institution HOD', campusId: 'COID1002', email: 'hod@campus.edu', pass: 'Hod123!', role: 'hod' },
+    { name: 'Librarian', campusId: 'COID1004', email: 'librarian@campus.edu', pass: 'Librarian123!', role: 'librarian' },
+    { name: 'Finance Officer', campusId: 'COID1005', email: 'finance@campus.edu', pass: 'Finance123!', role: 'finance_officer' },
+    { name: 'Analytics Officer', campusId: 'COID1003', email: 'analytics@campus.edu', pass: 'Analytics123!', role: 'analytics' }
   ];
 
   for (const r of rolesToVerify) {
-    const res = await postJson('/api/auth/login', { identifier: r.email, password: r.pass });
+    const res = await postJson('/api/auth/login', { identifier: r.campusId, password: r.pass });
     if (res.status === 200 && res.data.user.role === r.role) {
-      console.log(`[PASS] ${r.name.padEnd(20)}: ${r.email} (${res.data.user.role})`);
+      console.log(`[PASS] ${r.name.padEnd(20)}: ${r.campusId} (${res.data.user.role}) [Name: ${res.data.user.name}]`);
     } else {
       console.error(`[FAIL] ${r.name}: status=${res.status}`, res.data);
+      process.exit(1);
+    }
+
+    // Verify email login rejection
+    const emailRes = await postJson('/api/auth/login', { identifier: r.email, password: r.pass });
+    if (emailRes.status === 401 && emailRes.data.message?.includes('Email login is disabled')) {
+      console.log(`[PASS] Email Block Check for ${r.name}: "${emailRes.data.message}"`);
+    } else {
+      console.error(`[FAIL] Expected email login rejection for ${r.email}, got status ${emailRes.status}:`, emailRes.data);
       process.exit(1);
     }
   }

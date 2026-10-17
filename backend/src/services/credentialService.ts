@@ -17,23 +17,31 @@ const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 /**
- * Resolves user identity from email, rollNumber, or employeeCode
+ * Resolves user identity from campusId (COID####), rollNumber, or employeeCode.
+ * Email login is strictly disabled.
  */
 export async function resolveUserByIdentifier(identifier: string) {
   if (!identifier || typeof identifier !== 'string') return null;
 
   const trimmed = identifier.trim();
   if (trimmed.includes('@')) {
-    return await prisma.user.findUnique({
-      where: { email: trimmed },
-      include: {
-        studentProfile: { include: { department: true } },
-        facultyProfile: { include: { department: true } }
-      }
-    });
+    // Email is stored for record purposes only, not permitted as a login method
+    return null;
   }
 
-  // Lookup student rollNumber
+  const upper = trimmed.toUpperCase();
+
+  // 1. Primary: Lookup by CampusOne ID (COID####)
+  const userByCampusId = await prisma.user.findUnique({
+    where: { campusId: upper },
+    include: {
+      studentProfile: { include: { department: true } },
+      facultyProfile: { include: { department: true } }
+    }
+  });
+  if (userByCampusId) return userByCampusId;
+
+  // 2. Lookup student rollNumber
   const student = await prisma.student.findUnique({
     where: { rollNumber: trimmed },
     include: {
@@ -47,7 +55,7 @@ export async function resolveUserByIdentifier(identifier: string) {
   });
   if (student && student.user) return student.user;
 
-  // Lookup faculty employeeCode
+  // 3. Lookup faculty employeeCode
   const faculty = await prisma.faculty.findUnique({
     where: { employeeCode: trimmed },
     include: {
@@ -72,12 +80,22 @@ export async function verifyCredentials(
   identifier: string,
   password: string
 ): Promise<VerifyCredentialResult> {
+  const trimmed = (identifier || '').trim();
+
+  // Enforce rejection if user attempts to log in using an email
+  if (trimmed.includes('@')) {
+    return {
+      success: false,
+      error: 'Email login is disabled. Please log in using your CampusOne ID (e.g., COID1001).'
+    };
+  }
+
   const user = await resolveUserByIdentifier(identifier);
 
   if (!user) {
     // Perform dummy compare to prevent username enumeration via timing attacks
     await bcrypt.compare(password, DUMMY_HASH);
-    return { success: false, error: 'Invalid credentials' };
+    return { success: false, error: 'Invalid CampusOne ID or password' };
   }
 
   // Check canonical user_credentials table

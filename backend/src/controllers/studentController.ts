@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import bcrypt from 'bcryptjs';
 import { AuthRequest } from '../middlewares/authMiddleware';
+import { generateUniqueCampusId } from '../utils/campusIdGenerator';
 
 /**
  * Resolves the target student profile and enforces backend ownership rules.
@@ -138,10 +139,12 @@ export const createStudent = async (req: AuthRequest, res: Response) => {
     }
 
     const defaultPassword = await bcrypt.hash('student123', 10);
+    const campusId = await generateUniqueCampusId(prisma);
 
     const student = await prisma.$transaction(async (tx) => {
       const u = await tx.user.create({
         data: {
+          campusId,
           name,
           email,
           phone,

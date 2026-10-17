@@ -7,6 +7,7 @@
 
 export interface User {
   id: string;
+  campusId?: string;
   name: string;
   email: string;
   role: 'student' | 'faculty' | 'hod' | 'admin' | 'finance_officer' | 'librarian' | 'analytics' | 'management' | 'examiner';

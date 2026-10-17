@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import bcrypt from 'bcryptjs';
 import { Role } from '@prisma/client';
+import { generateUniqueCampusId } from '../utils/campusIdGenerator';
 
 export const getAdmissions = async (req: Request, res: Response) => {
   try {
@@ -171,11 +172,12 @@ export const createAdminUser = async (req: Request, res: Response) => {
 
     const plainPassword = `${role.split('_')[0]}123`;
     const defaultPassword = await bcrypt.hash(plainPassword, 10);
-    const generatedId = `${role.toUpperCase().substring(0,3)}${Math.floor(100 + Math.random() * 900)}`;
+    const campusId = await generateUniqueCampusId(prisma);
 
     const created = await prisma.$transaction(async (tx) => {
       const u = await tx.user.create({
         data: {
+          campusId,
           name,
           email,
           phone,
@@ -283,7 +285,7 @@ export const createAdminUser = async (req: Request, res: Response) => {
     });
 
     const { password: _passwordHash, ...safeUser } = created;
-    res.status(201).json({ success: true, user: safeUser, credentials: { id: generatedId, password: plainPassword } });
+    res.status(201).json({ success: true, user: safeUser, credentials: { id: campusId, campusId, password: plainPassword } });
   } catch (error) {
     console.error('[AdminController] createAdminUser error', error);
     res.status(500).json({ success: false, message: 'Server error' });

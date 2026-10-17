@@ -26,7 +26,7 @@ export const loginUser = async (req: Request, res: Response) => {
           message: verifyResult.error || 'Account temporarily locked. Please try again later.'
         });
       }
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: verifyResult.error || 'Invalid CampusOne ID or password' });
     }
 
     const user = verifyResult.user!;
@@ -68,6 +68,7 @@ export const loginUser = async (req: Request, res: Response) => {
       where: { id: user.id },
       select: {
         id: true,
+        campusId: true,
         name: true,
         email: true,
         role: true,

@@ -147,6 +147,7 @@ enum LeaveStatus {
 
 model User {
   id        String   @id @default(uuid())
+  campusId  String   @unique
   email     String   @unique
   name      String
   password  String
@@ -178,6 +179,7 @@ model User {
   reviewedDocuments       DocumentRequest[]          @relation("ReviewedDocuments")
 
   @@index([role])
+  @@index([campusId])
 }
 
 // ─── Department ───────────────────────────────────────────────────────────────

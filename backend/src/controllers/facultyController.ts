@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import bcrypt from 'bcryptjs';
 import { AuthRequest } from '../middlewares/authMiddleware';
+import { generateUniqueCampusId } from '../utils/campusIdGenerator';
 
 export const getFacultyList = async (req: AuthRequest, res: Response) => {
   try {
@@ -48,10 +49,12 @@ export const createFaculty = async (req: AuthRequest, res: Response) => {
     const { name, email, phone, department, designation, qualification } = req.body;
     const employeeCode = `FAC${new Date().getFullYear()}${Math.floor(100 + Math.random() * 900)}`;
     const defaultPassword = await bcrypt.hash('faculty123', 10);
+    const campusId = await generateUniqueCampusId(prisma);
 
     const created = await prisma.$transaction(async (tx) => {
       const u = await tx.user.create({
         data: {
+          campusId,
           name,
           email,
           phone,

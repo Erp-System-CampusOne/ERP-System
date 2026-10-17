@@ -37,15 +37,21 @@ export default function Login() {
     e.preventDefault();
     setError('');
     
-    if (!identifier.trim() || !password.trim()) {
-      setError('Please enter your identifier and password');
+    const trimmedId = identifier.trim().toUpperCase();
+    if (!trimmedId || !password.trim()) {
+      setError('Please enter your CampusOne ID and password');
+      return;
+    }
+
+    if (trimmedId.includes('@')) {
+      setError('Email login is disabled. Please log in using your CampusOne ID (e.g., COID1001).');
       return;
     }
 
     setIsLoading(true);
     
     try {
-      const loggedInUser = await login({ identifier, password });
+      const loggedInUser = await login({ identifier: trimmedId, password });
       
       const from = (location.state as Record<string, string> | null)?.from;
       if (from && from !== '/') {
@@ -54,8 +60,9 @@ export default function Login() {
         const userRole = loggedInUser?.role || 'student';
         navigate(getDashboardPath(userRole), { replace: true });
       }
-    } catch {
-      setError('Invalid credentials. Please try again.');
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'Invalid CampusOne ID or password. Please try again.';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -135,21 +142,33 @@ export default function Login() {
           <Card className="border-2 shadow-lg">
             <CardHeader className="text-center space-y-2">
               <CardTitle className="text-2xl font-display">Welcome Back</CardTitle>
-              <CardDescription>Enter your credentials to access your dashboard</CardDescription>
+              <CardDescription>Enter your CampusOne ID and password to access your dashboard</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="identifier" className="text-sm font-semibold">
-                    Email Address
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="identifier" className="text-sm font-semibold">
+                      CampusOne ID
+                    </Label>
+                    <span className="text-xs text-muted-foreground font-mono">Format: COID####</span>
+                  </div>
                   <Input
                     id="identifier"
-                    type="email"
-                    placeholder="e.g., student@campus.edu"
+                    type="text"
+                    placeholder="e.g., COID1001"
                     value={identifier}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIdentifier(e.target.value)}
-                    className="h-11"
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const val = e.target.value.toUpperCase();
+                      setIdentifier(val);
+                      if (val.includes('@')) {
+                        setError('Email login is disabled. Please enter your CampusOne ID (e.g., COID1001).');
+                      } else {
+                        setError('');
+                      }
+                    }}
+                    className="h-11 font-mono uppercase tracking-wide placeholder:font-sans placeholder:normal-case placeholder:tracking-normal"
+                    autoComplete="username"
                   />
                 </div>
 
