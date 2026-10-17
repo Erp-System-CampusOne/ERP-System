@@ -8,3 +8,5 @@ docs/source-data-backup.sql
 docs/phase0-diagnostic-output.txt
 *.backup
 *.dump
+.vercel
+.env*
