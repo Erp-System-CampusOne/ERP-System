@@ -88,13 +88,13 @@ export const getStudents = async (req: AuthRequest, res: Response) => {
       }
     });
 
-    const formatted = students.map(s => ({
+    const formatted = (students as any[]).map((s: any) => ({
       id: s.id,
-      campusId: s.user.campusId,
+      campusId: s.user?.campusId,
       rollNumber: s.rollNumber,
-      name: s.user.name,
-      email: s.user.email,
-      phone: s.user.phone,
+      name: s.user?.name,
+      email: s.user?.email,
+      phone: s.user?.phone,
       department: s.department ? s.department.name : '',
       degree: s.degree,
       semester: s.semester,
@@ -104,7 +104,7 @@ export const getStudents = async (req: AuthRequest, res: Response) => {
       attendancePercentage: s.attendancePercentage,
       feeStatus: s.feeStatus,
       feeQuota: s.feeQuota,
-      avatarUrl: s.user.avatarUrl
+      avatarUrl: s.user?.avatarUrl
     }));
 
     res.json(formatted);

@@ -24,19 +24,19 @@ export const getFacultyList = async (req: AuthRequest, res: Response) => {
       }
     });
 
-    const formatted = faculty.map(f => ({
+    const formatted = (faculty as any[]).map((f: any) => ({
       id: f.id,
-      campusId: f.user.campusId,
+      campusId: f.user?.campusId,
       employeeCode: f.employeeCode,
-      name: f.user.name,
-      email: f.user.email,
-      phone: f.user.phone,
+      name: f.user?.name,
+      email: f.user?.email,
+      phone: f.user?.phone,
       department: f.department.name,
       designation: f.designation,
       qualification: f.qualification,
       weeklyWorkloadHours: f.weeklyWorkloadHours,
       leaveBalance: f.leaveBalance,
-      avatarUrl: f.user.avatarUrl
+      avatarUrl: f.user?.avatarUrl
     }));
 
     res.json(formatted);
