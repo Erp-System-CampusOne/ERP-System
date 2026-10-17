@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { motion, useReducedMotion } from 'motion/react';
 import {
   LayoutDashboard, Users, GraduationCap, BookOpen, Calendar,
-  FileCheck, Plus, Search, Filter, CheckCircle2, Clock,
-  AlertCircle, Download, Save, RotateCcw, Loader2, UploadCloud,
-  XCircle, Award, UserPlus, ShieldCheck, ArrowRight, UserCheck
+  FileCheck, Plus, Search, CheckCircle2,
+  Download, Save, Loader2, UploadCloud,
+  XCircle, ArrowRight, UserCheck
 } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,9 +50,6 @@ export default function HodDashboard() {
     setSearchParams({ tab });
   };
 
-  const reduceMotion = useReducedMotion();
-  const Wrapper = reduceMotion ? 'div' : motion.div;
-
   // Data queries
   const { data: departments = [] } = useDepartments();
   const { data: studentsData = [], isLoading: loadingStudents } = useStudentsList();
@@ -68,25 +64,19 @@ export default function HodDashboard() {
   // Determine HOD's active department
   // If user has department assigned or matches first department
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
-
-  useEffect(() => {
-    if (departments.length > 0 && !selectedDeptId) {
-      setSelectedDeptId(departments[0].id);
-    }
-  }, [departments, selectedDeptId]);
-
-  const activeDepartment = departments.find(d => d.id === selectedDeptId) || departments[0];
+  const effectiveDeptId = selectedDeptId || departments[0]?.id || '';
+  const activeDepartment = departments.find(d => d.id === effectiveDeptId) || departments[0];
   const deptName = activeDepartment?.name || 'Department of Computer Science';
 
   // Filter department scoped data
   const deptStudents = (studentsData as Student[]).filter(
-    s => !selectedDeptId || s.department === deptName || (s as any).departmentId === selectedDeptId
+    s => !effectiveDeptId || s.department === deptName || (s as any).departmentId === effectiveDeptId
   );
   const deptFaculty = (facultyData as Faculty[]).filter(
-    f => !selectedDeptId || f.department === deptName || (f as any).departmentId === selectedDeptId
+    f => !effectiveDeptId || f.department === deptName || (f as any).departmentId === effectiveDeptId
   );
   const deptCourses = (coursesData as Course[]).filter(
-    c => !selectedDeptId || c.department === deptName || (c as any).departmentId === selectedDeptId
+    c => !effectiveDeptId || c.department === deptName || (c as any).departmentId === effectiveDeptId
   );
   const pendingDocs = documentRequests.filter((d: any) => d.status === 'pending');
 
@@ -300,12 +290,23 @@ export default function HodDashboard() {
                   Head of Department Portal
                 </span>
                 <span className="text-xs text-muted-foreground">Academic Year 2026-2027</span>
+                {departments.length > 1 && (
+                  <select
+                    className="h-7 text-xs rounded-md border border-border bg-background px-2 font-medium"
+                    value={effectiveDeptId}
+                    onChange={(e) => setSelectedDeptId(e.target.value)}
+                  >
+                    {departments.map((d: any) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                )}
               </div>
               <h1 className="font-display text-2xl md:text-3xl font-bold tracking-tight mt-1 text-foreground">
                 {deptName}
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Executive Department Command Center • Direct User Provisioning • Curricula & Timetable
+                Executive Command Center • {user?.name || 'Head of Department'} • Direct User Provisioning • Curricula & Timetable
               </p>
             </div>
 
@@ -313,13 +314,13 @@ export default function HodDashboard() {
             <div className="flex flex-wrap items-center gap-2">
               <AddStudentDialog
                 defaultDepartment={deptName}
-                defaultDepartmentId={selectedDeptId}
+                defaultDepartmentId={effectiveDeptId}
                 triggerText="+ Onboard Student"
               />
               <AddStaffDialog
                 role="faculty"
                 roleLabel="Faculty"
-                defaultDepartmentId={selectedDeptId}
+                defaultDepartmentId={effectiveDeptId}
               />
               <AssignExaminerDialog
                 departmentName={deptName}
@@ -1025,7 +1026,6 @@ export default function HodDashboard() {
                         .map((doc: any) => {
                           const isPending = doc.status === 'pending';
                           const isCompleted = doc.status === 'completed';
-                          const isRejected = doc.status === 'rejected';
                           return (
                             <tr key={doc.id} className="hover:bg-muted/30">
                               <td className="py-3 pl-2 font-medium text-foreground">{doc.documentName}</td>

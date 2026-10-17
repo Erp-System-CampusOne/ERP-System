@@ -571,17 +571,17 @@ async function runTests() {
   // Suite 6: Analytics Unauthorized Operational Writes (VULN-04)
   console.log('\n[Suite 6] Analytics Unauthorized Operational Write Revocation (VULN-04)...');
 
-  // 6.1 Admission status mutation
-  const analytics_admission = await apiRequest(`/api/admin/admissions/${FIXTURES.admissionAppId}`, {
-    method: 'PUT',
+  // 6.1 Operational user onboarding mutation
+  const analytics_user_create = await apiRequest('/api/admin/users', {
+    method: 'POST',
     headers: { Authorization: `Bearer ${FIXTURES.analyticsUser.token}` },
-    body: { status: 'admitted' }
+    body: { name: 'Unauthorized User', email: 'unauth_sec@test.com', role: 'student' }
   });
-  assert(analytics_admission.status === 403, 'T13-A: Analytics attempting to update admission status rejected with HTTP 403');
+  assert(analytics_user_create.status === 403, 'T13-A: Analytics attempting operational write on user onboarding rejected with HTTP 403');
 
-  // Verify admission status was NOT altered
-  const admCheck = await prisma.admissionApplication.findUnique({ where: { id: FIXTURES.admissionAppId } });
-  assert(admCheck.status === 'pending', 'T13-B: Admission application remained in pending state');
+  // Verify unauthorized user was NOT created
+  const userCheck = await prisma.user.findUnique({ where: { email: 'unauth_sec@test.com' } });
+  assert(userCheck === null, 'T13-B: Operational user onboarding was safely blocked');
 
   // 6.2 Role permissions mutation
   const analytics_roles = await apiRequest('/api/admin/roles/faculty/permissions', {

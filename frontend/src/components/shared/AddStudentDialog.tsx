@@ -239,7 +239,7 @@ export function AddStudentDialog({
                   required
                   className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={form.feeQuota}
-                  onChange={(e) => setForm({ ...form, feeQuota: e.target.value as any })}
+                  onChange={(e) => setForm({ ...form, feeQuota: e.target.value as 'general' | 'merit' | 'management' | 'nri' })}
                 >
                   <option value="general">General</option>
                   <option value="merit">Merit</option>

@@ -6,6 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ShieldCheck, Copy, CheckCircle2, Loader2 } from 'lucide-react';
+import { Course, Examination } from '@/api/apiInterface';
+
+interface ExaminerOption {
+  id: string;
+  name: string;
+  email: string;
+}
 
 interface AssignExaminerDialogProps {
   departmentName?: string;
@@ -49,7 +56,7 @@ export function AssignExaminerDialog({
 
   // Filter department courses if specified
   const filteredCourses = departmentName
-    ? courses.filter((c: any) => c.department === departmentName)
+    ? courses.filter((c: Course) => c.department === departmentName)
     : courses;
 
   const handleAssign = async (e: React.FormEvent) => {
@@ -70,9 +77,9 @@ export function AssignExaminerDialog({
         setAssignSuccess(false);
         setIsOpen(false);
       }, 1500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      alert(err.message || 'Failed to assign examiner');
+      alert(err instanceof Error ? err.message : 'Failed to assign examiner');
     }
   };
 
@@ -88,7 +95,7 @@ export function AssignExaminerDialog({
       if (res.success && res.credentials) {
         setCreatedCredentials(res.credentials);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       alert('Failed to onboard examiner');
     }
@@ -188,7 +195,7 @@ export function AssignExaminerDialog({
                   onChange={(e) => setSelectedExaminerId(e.target.value)}
                 >
                   <option value="">Select an Examiner...</option>
-                  {examiners.map((ex: any) => (
+                  {examiners.map((ex: ExaminerOption) => (
                     <option key={ex.id} value={ex.id}>
                       {ex.name} ({ex.email})
                     </option>
@@ -211,7 +218,7 @@ export function AssignExaminerDialog({
                   onChange={(e) => setSelectedExamId(e.target.value)}
                 >
                   <option value="">Select Examination...</option>
-                  {examinations.map((ex: any) => (
+                  {examinations.map((ex: Examination) => (
                     <option key={ex.id} value={ex.id}>
                       {ex.title} (Sem {ex.semester} • {ex.academicYear})
                     </option>
@@ -229,7 +236,7 @@ export function AssignExaminerDialog({
                   onChange={(e) => setSelectedCourseId(e.target.value)}
                 >
                   <option value="">Select Course...</option>
-                  {filteredCourses.map((c: any) => (
+                  {filteredCourses.map((c: Course) => (
                     <option key={c.id} value={c.id}>
                       {c.code} - {c.name} (Sem {c.semester})
                     </option>

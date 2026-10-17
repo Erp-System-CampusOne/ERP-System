@@ -25,7 +25,6 @@ function RouteBoundary({ children, routeId }: { children: React.ReactNode; route
 
 const NotFound = lazy(() => import('../pages/NotFound'));
 const Login = lazy(() => import('../pages/Login'));
-const Signup = lazy(() => import('../pages/Signup'));
 const ForgotPassword = lazy(() => import('../pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('../pages/ResetPassword'));
 const VerifyEmail = lazy(() => import('../pages/VerifyEmail'));
@@ -43,11 +42,9 @@ const FacultyClasses = lazy(() => import('../pages/FacultyClasses'));
 const FacultyGrading = lazy(() => import('../pages/FacultyGrading'));
 const FacultyLeaves = lazy(() => import('../pages/FacultyLeaves'));
 const FacultyTimetable = lazy(() => import('../pages/FacultyTimetable'));
-const FacultyDepartment = lazy(() => import('../pages/FacultyDepartment'));
 const HodDashboard = lazy(() => import('../pages/HodDashboard'));
 const Admin = lazy(() => import('../pages/Admin'));
 const AdminStudents = lazy(() => import('../pages/AdminStudents'));
-const AdminAdmissions = lazy(() => import('../pages/AdminAdmissions'));
 const AdminFaculty = lazy(() => import('../pages/AdminFaculty'));
 const AdminAcademics = lazy(() => import('../pages/AdminAcademics'));
 const AdminTimetableBuilder = lazy(() => import('../pages/AdminTimetableBuilder'));
@@ -64,7 +61,6 @@ const LibraryCatalog = lazy(() => import('../pages/LibraryCatalog'));
 const LibraryCirculation = lazy(() => import('../pages/LibraryCirculation'));
 const LibraryFines = lazy(() => import('../pages/LibraryFines'));
 const Analytics = lazy(() => import('../pages/Analytics'));
-const AnalyticsAdmissions = lazy(() => import('../pages/AnalyticsAdmissions'));
 const AnalyticsAcademicPerformance = lazy(() => import('../pages/AnalyticsAcademicPerformance'));
 const AnalyticsPlacement = lazy(() => import('../pages/AnalyticsPlacement'));
 const AnalyticsFinancialHealth = lazy(() => import('../pages/AnalyticsFinancialHealth'));

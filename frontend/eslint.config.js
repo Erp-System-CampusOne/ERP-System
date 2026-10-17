@@ -24,6 +24,7 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-explicit-any': 'warn',
       'react-hooks/exhaustive-deps': 'warn',
       'react-hooks/rules-of-hooks': 'warn',
     },
@@ -34,6 +35,7 @@ export default tseslint.config(
       'src/app/router.generated.tsx',
       'src/components/shared/AppLayout.tsx',
       'src/components/ui/button.tsx',
+      'src/components/ui/dialog.tsx',
       'src/contexts/AuthContext.tsx',
     ],
     rules: {

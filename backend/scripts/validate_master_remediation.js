@@ -18,7 +18,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const express = require('express');
-const { Client } = require('c:/Projects/ERP-System/node_modules/pg');
+const { Client } = require('pg');
 
 const DISPOSABLE_DB_URL = 'postgresql://postgres:postgres@127.0.0.1:5433/postgres';
 const TEST_JWT_SECRET = 'mZp12XICGsmUbvvn7Kf9OcmSv2uq572AeuL2OSpfsrUXiDbBBJXSZTX7ppfOc37u';
@@ -624,9 +624,9 @@ async function main() {
     const perfRes = await request('GET', '/api/analytics/academic-performance', null, analyticsAuth.authHeader);
     assert(perfRes.status === 200, 'T37: Analytics reads academic performance (HTTP 200)');
 
-    // T38: Analytics attempts to approve admission -> 403 Forbidden
-    const unauthAdm = await request('PUT', '/api/admin/admissions/mock-id', { status: 'approved' }, analyticsAuth.authHeader);
-    assert(unauthAdm.status === 403, 'T38: Analytics attempting operational write on admissions rejected with HTTP 403');
+    // T38: Analytics attempts operational write on admin user onboarding -> 403 Forbidden
+    const unauthWrite = await request('POST', '/api/admin/users', { name: 'Unauthorized', email: 'unauth@test.com', role: 'student' }, analyticsAuth.authHeader);
+    assert(unauthWrite.status === 403, 'T38: Analytics attempting operational write on user onboarding rejected with HTTP 403');
 
     // T39: Analytics attempts to approve exam marks -> 403 Forbidden
     const unauthMarks = await request('PUT', `/api/examinations/${exam1.id}/marks/approve`, {}, analyticsAuth.authHeader);

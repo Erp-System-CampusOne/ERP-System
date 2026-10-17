@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   Calendar, Plus, Save, Download, RotateCcw,
-  Clock, MapPin, CheckCircle, AlertCircle, Filter, X, Loader2
+  Clock, MapPin, CheckCircle, AlertCircle, X, Loader2
 } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

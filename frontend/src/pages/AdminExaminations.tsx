@@ -37,7 +37,7 @@ function getStatusColor(status: string) {
   }
 }
 
-type ExamDuty = {
+export type ExamDuty = {
   id: string;
   examinerName: string;
   subject: string;
@@ -398,7 +398,7 @@ export default function AdminExaminations() {
                                     const res = await fetch(`${apiConfig.baseUrl}/examinations/${exam.id}/stats`, { headers: apiConfig.headers });
                                     const data = await res.json();
                                     alert(`Pass Percentage: ${data.passPercentage}%\nAverage Score: ${data.averageScore}\nTotal Students: ${data.totalStudents}`);
-                                  } catch (e) {
+                                  } catch {
                                     alert("Failed to load stats");
                                   }
                                 }}>View Stats</Button>

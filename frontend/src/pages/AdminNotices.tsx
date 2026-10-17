@@ -1,4 +1,3 @@
-import { Notice } from '@/api/apiInterface';
 import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {

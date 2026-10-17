@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
-import { BookOpen, Users, GraduationCap, Shield, ArrowRight, Eye, EyeOff, Sparkles, DollarSign, Library, BarChart3, Briefcase } from 'lucide-react';
+import { BookOpen, Users, GraduationCap, Shield, ArrowRight, Eye, EyeOff, DollarSign, Library, BarChart3, Briefcase } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,11 +59,6 @@ export default function Login() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const quickLogin = async (identifierToUse: string) => {
-    setIdentifier(identifierToUse);
-    setPassword('admin123'); // For testing/demo purposes based on seed data
   };
 
   return (
