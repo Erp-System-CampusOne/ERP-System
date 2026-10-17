@@ -14,13 +14,13 @@ import { authorizeRoles } from '../middlewares/roleMiddleware';
 const router = Router();
 router.use(authenticateJWT);
 
-// These routes should likely be restricted to management, admin, or specific roles
-router.get('/overview', authorizeRoles('admin', 'management', 'hod'), getInstitutionalOverview);
-router.get('/admissions', authorizeRoles('admin', 'management'), getAdmissionsAnalytics);
-router.get('/admissions/report', authorizeRoles('admin', 'management'), exportAdmissionsReport);
-router.get('/academic-performance', authorizeRoles('admin', 'management', 'hod'), getAcademicPerformanceAnalytics);
-router.get('/placements', authorizeRoles('admin', 'management'), getPlacementAnalytics);
-router.get('/activity', authorizeRoles('admin', 'management'), getSystemActivity);
-router.get('/financial-health', authorizeRoles('admin', 'management'), getFinancialHealthAnalytics);
+// Restricted to analytics, management (legacy alias), admin, and authorized academic roles
+router.get('/overview', authorizeRoles('admin', 'analytics', 'management', 'hod'), getInstitutionalOverview);
+router.get('/admissions', authorizeRoles('admin', 'analytics', 'management'), getAdmissionsAnalytics);
+router.get('/admissions/report', authorizeRoles('admin', 'analytics', 'management'), exportAdmissionsReport);
+router.get('/academic-performance', authorizeRoles('admin', 'analytics', 'management', 'hod'), getAcademicPerformanceAnalytics);
+router.get('/placements', authorizeRoles('admin', 'analytics', 'management'), getPlacementAnalytics);
+router.get('/activity', authorizeRoles('admin', 'analytics', 'management'), getSystemActivity);
+router.get('/financial-health', authorizeRoles('admin', 'analytics', 'management'), getFinancialHealthAnalytics);
 
 export default router;

@@ -9,7 +9,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'student' | 'faculty' | 'hod' | 'admin' | 'finance_officer' | 'librarian' | 'management';
+  role: 'student' | 'faculty' | 'hod' | 'admin' | 'finance_officer' | 'librarian' | 'analytics' | 'management' | 'examiner';
   department?: string;
   avatarUrl?: string;
   phone?: string;
@@ -18,7 +18,7 @@ export interface User {
 export interface LoginInput {
   identifier: string;
   password: string;
-  role?: 'student' | 'faculty' | 'hod' | 'admin' | 'finance_officer' | 'librarian' | 'management';
+  role?: 'student' | 'faculty' | 'hod' | 'admin' | 'finance_officer' | 'librarian' | 'analytics' | 'management' | 'examiner';
 }
 
 export interface AuthResponse {

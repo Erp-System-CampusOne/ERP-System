@@ -83,7 +83,7 @@ export default function Analytics() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <AddStaffDialog role="management" roleLabel="Management User" />
+                  <AddStaffDialog role="analytics" roleLabel="Analytics Officer" />
                   <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-success/10 text-success font-medium">
                     <Award className="w-5 h-5" />
                     <span>NAAC: {overview?.naacGrade || 'N/A'}</span>

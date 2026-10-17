@@ -4,7 +4,7 @@ import { FileText, Download, Clock, CheckCircle, AlertCircle, Printer, FileCheck
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useStudentDocuments } from '@/features/student/hooks';
+import { useStudentDocuments, useRequestDocument } from '@/features/student/hooks';
 import { cn } from '@/lib/utils';
 import type { DocumentRequestResponse } from '@/api/apiInterface';
 
@@ -99,7 +99,7 @@ const DOCUMENTS: DocumentRequest[] = [
   },
 ];
 
-function DocumentCard({ doc }: { doc: DocumentRequest }) {
+function DocumentCard({ doc, onRequest, isPending }: { doc: DocumentRequest; onRequest: () => void; isPending: boolean }) {
   const Icon = doc.icon;
 
   return (
@@ -131,9 +131,9 @@ function DocumentCard({ doc }: { doc: DocumentRequest }) {
         <div className="flex flex-col items-end gap-2">
           {doc.available ? (
             <>
-              <Button size="sm">
+              <Button size="sm" onClick={onRequest} disabled={isPending}>
                 <Printer className="w-4 h-4 mr-2" />
-                Request
+                {isPending ? 'Requesting...' : 'Request'}
               </Button>
               <Button variant="ghost" size="sm">
                 <Download className="w-4 h-4 mr-1" />
@@ -203,6 +203,7 @@ export default function StudentDocuments() {
   const Wrapper = reduceMotion ? 'div' : motion.div;
   
   const { data: documents = [] } = useStudentDocuments();
+  const requestMutation = useRequestDocument();
   
   const requestsList = (documents as DocumentRequestResponse[]).map((doc) => ({
     id: doc.id,
@@ -277,7 +278,12 @@ export default function StudentDocuments() {
           <h2 className="font-display text-xl font-semibold tracking-tight mb-4">Request Documents</h2>
           <div className="space-y-3">
             {DOCUMENTS.map((doc) => (
-              <DocumentCard key={doc.id} doc={doc} />
+              <DocumentCard
+                key={doc.id}
+                doc={doc}
+                onRequest={() => requestMutation.mutate({ documentName: doc.name, purpose: doc.description })}
+                isPending={requestMutation.isPending}
+              />
             ))}
           </div>
         </div>

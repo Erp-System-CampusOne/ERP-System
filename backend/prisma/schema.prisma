@@ -22,6 +22,8 @@ enum Role {
   finance_officer
   librarian
   management
+  examiner
+  analytics
 }
 
 enum FeeStatus {
@@ -94,6 +96,7 @@ enum NoticeTargetRole {
   finance_officer
   librarian
   management
+  analytics
 }
 
 // NEW — replaces raw String fields
@@ -169,6 +172,11 @@ model User {
   employeeProfile         EmployeeProfile?
   canonicalStudentProfile StudentProfile?
 
+  // P3 Relations
+  examinerAssignments     ExaminerAssignment[]
+  hodAssignments          InstitutionHodAssignment[]
+  reviewedDocuments       DocumentRequest[]          @relation("ReviewedDocuments")
+
   @@index([role])
 }
 
@@ -180,7 +188,7 @@ model Department {
   id                 String   @id @default(uuid())
   code               String   @unique
   name               String   @unique // Two departments cannot share a name
-  headOfDepartmentId String?  @unique // FK → Faculty.id (named relation below)
+  headOfDepartmentId String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -191,7 +199,7 @@ model Department {
   students       Student[]
   faculty        Faculty[]        @relation("DepartmentFaculty")
   courses        Course[]
-  timetables     TimetableEntry[]
+  timetables        TimetableEntry[]
   appointments   DepartmentAppointment[]
   expenseRecords ExpenseRecord[]
 }
@@ -255,7 +263,7 @@ model Faculty {
   courses          Course[]
   timetableEntries TimetableEntry[]
   leaveRequests    LeaveRequest[]
-  headOf           Department?      @relation("DepartmentHOD") // back-ref: this faculty may head a dept
+  headOf           Department[]     @relation("DepartmentHOD")
 
   @@index([departmentId])
   @@index([designation])
@@ -286,6 +294,7 @@ model Course {
   attendanceRecords AttendanceRecord[]
   examResults       ExamResult[]
   timetables        TimetableEntry[]
+  examinerAssignments ExaminerAssignment[]
 
   @@index([departmentId])
   @@index([departmentId, semester]) // most common query pattern
@@ -366,7 +375,8 @@ model Examination {
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
-  examResults ExamResult[] // back-reference — was missing entirely
+  examResults ExamResult[]
+  examinerAssignments ExaminerAssignment[]
 
   @@index([semester])
   @@index([status])
@@ -385,6 +395,11 @@ model ExamResult {
   endSemScore   Float?
   totalScore    Float
   grade         String
+  status        String   @default("published")
+  submittedBy   String?
+  submittedAt   DateTime?
+  approvedBy    String?
+  approvedAt    DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -397,6 +412,7 @@ model ExamResult {
   @@index([studentId])
   @@index([courseId])
   @@index([examinationId])
+  @@index([status])
 }
 
 // ─── FeeStructure ────────────────────────────────────────────────────────────
@@ -432,7 +448,7 @@ model FeeTransaction {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@index([studentId])
   @@index([status])
@@ -563,15 +579,21 @@ model LeaveRequest {
 model DocumentRequest {
   id           String         @id @default(uuid())
   studentId    String
-  documentName String
-  status       DocumentStatus @default(pending) // was String — now proper enum
+  documentName   String
+  purpose        String?
+  reviewerId     String?
+  reviewedAt     DateTime?
+  rejectionReason String?
+  status         DocumentStatus @default(pending) // was String — now proper enum
   requestedAt  DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  reviewer User?   @relation("ReviewedDocuments", fields: [reviewerId], references: [id], onDelete: SetNull)
 
   @@index([studentId])
   @@index([status])
+  @@index([reviewerId])
 }
 
 // ─── AdmissionApplication ─────────────────────────────────────────────────────
@@ -735,6 +757,7 @@ model Institution {
   employeeProfiles          EmployeeProfile[]
   studentProfiles           StudentProfile[]
   studentProgramEnrollments StudentProgramEnrollment[]
+  hodAssignments            InstitutionHodAssignment[]
 
   @@map("institutions")
 }
@@ -1121,3 +1144,40 @@ model StudentTermRegistration {
   @@map("student_term_registrations")
 }
 
+model ExaminerAssignment {
+  id            String      @id @default(uuid())
+  examinerId    String      @map("examiner_id")
+  examinationId String      @map("examination_id")
+  courseId      String      @map("course_id")
+  assignedAt    DateTime    @default(now()) @map("assigned_at")
+  status        String      @default("assigned")
+
+  examiner    User        @relation(fields: [examinerId], references: [id], onDelete: Cascade)
+  examination Examination @relation(fields: [examinationId], references: [id], onDelete: Cascade)
+  course      Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([examinerId, examinationId, courseId])
+  @@index([examinerId])
+  @@index([examinationId])
+  @@index([courseId])
+  @@map("examiner_assignments")
+}
+
+model InstitutionHodAssignment {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String    @db.Uuid @map("institution_id")
+  userId        String    @map("user_id")
+  appointedAt   DateTime  @default(now()) @db.Timestamptz @map("appointed_at")
+  relievedAt    DateTime? @db.Timestamptz @map("relieved_at")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt     DateTime  @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([institutionId])
+  @@index([userId])
+  @@index([isActive])
+  @@map("institution_hod_assignments")
+}

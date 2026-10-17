@@ -162,3 +162,30 @@ export function useStudentDocuments() {
     enabled: !!studentId,
   });
 }
+
+export function useRequestDocument() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const studentId = getStudentId(user);
+
+  return useMutation({
+    mutationFn: async ({ documentName, purpose }: { documentName: string; purpose?: string }) => {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/documents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ documentName, purpose, studentId })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to request document');
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['student', 'documents', studentId] });
+    },
+  });
+}
+

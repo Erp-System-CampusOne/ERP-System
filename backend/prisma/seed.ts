@@ -27,16 +27,16 @@ async function main() {
     },
   });
 
-  // Management user — credentials for the executive Analytics portal.
-  const managementPassword = await bcrypt.hash('management123', 10);
+  // Analytics user — credentials for the executive Analytics portal.
+  const analyticsPassword = await bcrypt.hash('analytics123', 10);
   await prisma.user.upsert({
-    where: { email: 'management@campus.edu' },
-    update: { name: 'Rohan Mehta', password: managementPassword, role: 'management' },
+    where: { email: 'analytics@campus.edu' },
+    update: { name: 'Dr. Rohan Mehta', password: analyticsPassword, role: 'analytics' },
     create: {
-      email: 'management@campus.edu',
-      name: 'Rohan Mehta',
-      password: managementPassword,
-      role: 'management',
+      email: 'analytics@campus.edu',
+      name: 'Dr. Rohan Mehta',
+      password: analyticsPassword,
+      role: 'analytics',
     },
   });
 
@@ -97,6 +97,46 @@ async function main() {
           employeeCode: 'FAC1001',
           departmentId: csDept.id,
           designation: 'Professor',
+        },
+      },
+    },
+  });
+
+  // 3b. HOD User
+  const hodPassword = await bcrypt.hash('hod123', 10);
+  await prisma.user.upsert({
+    where: { email: 'hod@campus.edu' },
+    update: {},
+    create: {
+      email: 'hod@campus.edu',
+      name: 'Prof. Alistair HOD',
+      password: hodPassword,
+      role: 'hod',
+      facultyProfile: {
+        create: {
+          employeeCode: 'HOD1001',
+          departmentId: csDept.id,
+          designation: 'Head of Department',
+        },
+      },
+    },
+  });
+
+  // 3c. Examiner User
+  const examinerPassword = await bcrypt.hash('examiner123', 10);
+  await prisma.user.upsert({
+    where: { email: 'examiner@campus.edu' },
+    update: {},
+    create: {
+      email: 'examiner@campus.edu',
+      name: 'Dr. Ethan Examiner',
+      password: examinerPassword,
+      role: 'examiner',
+      facultyProfile: {
+        create: {
+          employeeCode: 'EXM1001',
+          departmentId: csDept.id,
+          designation: 'Examination Officer',
         },
       },
     },

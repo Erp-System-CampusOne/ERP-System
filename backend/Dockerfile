@@ -9,7 +9,7 @@ COPY backend/package.json ./backend/
 COPY frontend/package.json ./frontend/
 
 # Install all deps (devDeps needed for tsc + ts-node)
-RUN npm ci --workspace=backend --include-workspace-root
+RUN npm ci --workspace=backend --include-workspace-root --ignore-scripts
 
 # Copy backend source
 COPY backend/ ./backend/
@@ -54,14 +54,16 @@ ENV NODE_ENV=production
 
 EXPOSE 3000
 
-# startup: apply tracked migrations → seed → repair library invariants → start server
+# startup: apply tracked migrations → (opt-in seed) → start server
 CMD ["sh", "-c", "\
   echo '>>> Applying Prisma migrations...' && \
   npx prisma migrate deploy && \
-  echo '>>> Seeding database...' && \
-  npx ts-node --project tsconfig.json --transpile-only prisma/seed.ts && \
-  echo '>>> Repairing and constraining library data...' && \
-  npx ts-node --project tsconfig.json --transpile-only prisma/repair-library.ts && \
+  if [ \"$SEED_ON_STARTUP\" = \"true\" ]; then \
+    echo '>>> Seeding database (SEED_ON_STARTUP is true)...' && \
+    npx ts-node --project tsconfig.json --transpile-only prisma/seed.ts && \
+    echo '>>> Repairing and constraining library data...' && \
+    npx ts-node --project tsconfig.json --transpile-only prisma/repair-library.ts; \
+  fi && \
   echo '>>> Starting API server...' && \
   node dist/index.js \
 "]

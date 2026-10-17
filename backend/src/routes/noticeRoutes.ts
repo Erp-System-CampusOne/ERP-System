@@ -7,10 +7,13 @@ const router = Router();
 
 router.use(authenticateJWT);
 
+// All authenticated users can view notices
 router.get('/', authorizeRoles('all'), getNotices);
-router.post('/', authorizeRoles('admin', 'faculty', 'hod', 'management'), createNotice);
-router.put('/:id', authorizeRoles('admin', 'faculty', 'hod', 'management'), updateNotice);
-router.patch('/:id/pin', authorizeRoles('admin', 'management'), togglePinNotice);
-router.delete('/:id', authorizeRoles('admin', 'faculty', 'hod', 'management'), deleteNotice);
+
+// Operational notice creation/modification restricted to Admin, HOD, and Faculty (Analytics/management revoked)
+router.post('/', authorizeRoles('admin', 'faculty', 'hod'), createNotice);
+router.put('/:id', authorizeRoles('admin', 'faculty', 'hod'), updateNotice);
+router.patch('/:id/pin', authorizeRoles('admin'), togglePinNotice);
+router.delete('/:id', authorizeRoles('admin', 'faculty', 'hod'), deleteNotice);
 
 export default router;

@@ -3,13 +3,73 @@ import prisma from '../config/db';
 import bcrypt from 'bcryptjs';
 import { AuthRequest } from '../middlewares/authMiddleware';
 
-export const getStudents = async (req: Request, res: Response) => {
+/**
+ * Resolves the target student profile and enforces backend ownership rules.
+ * - If requestedId === 'me': resolves current authenticated student's profile.
+ * - If caller is 'student': enforces that target student profile belongs to req.user.id.
+ * - Returns { authorized: false, status, message } if unauthorized or not found.
+ */
+async function resolveStudentScope(
+  req: AuthRequest,
+  requestedId: string
+): Promise<
+  | { authorized: true; studentId: string; student: any }
+  | { authorized: false; status: number; message: string }
+> {
+  const userId = req.user?.id;
+  if (!userId) {
+    return { authorized: false, status: 401, message: 'Unauthenticated' };
+  }
+
+  const isStudent = req.user?.role === 'student' || req.user?.roles?.includes('student');
+
+  if (requestedId === 'me') {
+    const student = await prisma.student.findUnique({
+      where: { userId },
+      include: { user: true, department: true }
+    });
+    if (!student) {
+      return { authorized: false, status: 404, message: 'Student profile not found' };
+    }
+    return { authorized: true, studentId: student.id, student };
+  }
+
+  const student = await prisma.student.findUnique({
+    where: { id: requestedId },
+    include: { user: true, department: true }
+  });
+
+  if (!student) {
+    return { authorized: false, status: 404, message: 'Student not found' };
+  }
+
+  if (isStudent && student.userId !== userId) {
+    return {
+      authorized: false,
+      status: 403,
+      message: 'Access denied: Students may only access their own records'
+    };
+  }
+
+  return { authorized: true, studentId: student.id, student };
+}
+
+export const getStudents = async (req: AuthRequest, res: Response) => {
   try {
+    // Defense-in-depth: enforce that students never receive the full institutional student roster
+    const isStudent = req.user?.role === 'student' || req.user?.roles?.includes('student');
+    const isPrivileged = req.user?.role === 'admin' || req.user?.role === 'hod' || req.user?.role === 'faculty' ||
+      req.user?.roles?.some(r => ['admin', 'hod', 'faculty', 'management', 'analytics'].includes(r));
+
+    if (isStudent && !isPrivileged) {
+      return res.status(403).json({ success: false, message: 'Access denied: Students may not browse the student roster' });
+    }
+
     const { department, semester, batch, search } = req.query;
     
     let whereClause: any = {};
     if (department) whereClause.departmentId = department;
-    if (semester) whereClause.semester = parseInt(semester as string);
+    if (semester) whereClause.semester = parseInt(semester as string, 10);
     if (batch) whereClause.batch = batch;
     
     if (search) {
@@ -33,7 +93,7 @@ export const getStudents = async (req: Request, res: Response) => {
       name: s.user.name,
       email: s.user.email,
       phone: s.user.phone,
-      department: s.department.name,
+      department: s.department ? s.department.name : '',
       degree: s.degree,
       semester: s.semester,
       batch: s.batch,
@@ -51,49 +111,79 @@ export const getStudents = async (req: Request, res: Response) => {
   }
 };
 
-export const createStudent = async (req: Request, res: Response) => {
+export const createStudent = async (req: AuthRequest, res: Response) => {
   try {
     const { name, email, phone, department, degree, feeQuota, semester, batch, section } = req.body;
 
-    // Generate roll number (mock logic)
+    // Generate roll number
     const rollNumber = `STU${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`;
     const defaultPassword = await bcrypt.hash('student123', 10);
 
-    const student = await prisma.user.create({
-      data: {
-        name,
-        email,
-        phone,
-        password: defaultPassword,
-        role: 'student',
-        studentProfile: {
-          create: {
-            rollNumber,
-            departmentId: department, // Assuming 'department' is an ID
-            degree,
-            feeQuota,
-            semester: semester || 1,
-            batch,
-            section
+    const student = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.create({
+        data: {
+          name,
+          email,
+          phone,
+          password: defaultPassword,
+          role: 'student',
+          studentProfile: {
+            create: {
+              rollNumber,
+              departmentId: department,
+              degree,
+              feeQuota,
+              semester: semester || 1,
+              batch,
+              section
+            }
           }
+        },
+        include: {
+          studentProfile: { include: { department: true } }
         }
-      },
-      include: {
-        studentProfile: { include: { department: true } }
+      });
+
+      // Synchronize canonical userCredential
+      await tx.userCredential.create({
+        data: {
+          userId: u.id,
+          credentialType: 'password',
+          passwordHash: defaultPassword,
+          algorithm: 'bcrypt',
+          requiresChange: false,
+          failedLoginAttempts: 0,
+          lockedUntil: null
+        }
+      });
+
+      // Synchronize canonical userRoleAssignment
+      const canonicalRole = await tx.appRole.findUnique({ where: { code: 'student' } });
+      if (canonicalRole) {
+        await tx.userRoleAssignment.create({
+          data: {
+            userId: u.id,
+            roleId: canonicalRole.id,
+            isActive: true,
+            validFrom: new Date()
+          }
+        });
       }
+
+      return u;
     });
 
     if (student.studentProfile) {
-       res.json({
+      res.json({
         id: student.studentProfile.id,
         rollNumber: student.studentProfile.rollNumber,
         name: student.name,
         email: student.email,
-        department: student.studentProfile.department.name,
+        department: student.studentProfile.department ? student.studentProfile.department.name : '',
         semester: student.studentProfile.semester
       });
     } else {
-       res.status(500).json({ success: false, message: 'Failed to create student profile' });
+      res.status(500).json({ success: false, message: 'Failed to create student profile' });
     }
   } catch (error: any) {
     console.error('Failed to create student:', error);
@@ -104,13 +194,13 @@ export const createStudent = async (req: Request, res: Response) => {
   }
 };
 
-export const getStudentById = async (req: Request, res: Response) => {
+export const getStudentById = async (req: AuthRequest, res: Response) => {
   try {
-    const student = await prisma.student.findUnique({
-      where: { id: req.params.id },
-      include: { user: true, department: true }
-    });
-    if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
+    const scope = await resolveStudentScope(req, req.params.id);
+    if (!scope.authorized) {
+      return res.status(scope.status).json({ success: false, message: scope.message });
+    }
+    const student = scope.student;
     
     res.json({
       id: student.id,
@@ -118,7 +208,7 @@ export const getStudentById = async (req: Request, res: Response) => {
       name: student.user.name,
       email: student.user.email,
       phone: student.user.phone,
-      department: student.department.name,
+      department: student.department ? student.department.name : '',
       degree: student.degree,
       semester: student.semester,
       batch: student.batch,
@@ -134,22 +224,43 @@ export const getStudentById = async (req: Request, res: Response) => {
   }
 };
 
-export const updateStudent = async (req: Request, res: Response) => {
+export const updateStudent = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, phone, semester, section } = req.body;
-    
-    // First update User part
-    const student = await prisma.student.findUnique({ where: { id: req.params.id } });
-    if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
+    const scope = await resolveStudentScope(req, req.params.id);
+    if (!scope.authorized) {
+      return res.status(scope.status).json({ success: false, message: scope.message });
+    }
+    const student = scope.student;
+    const isStudent = req.user?.role === 'student' || req.user?.roles?.includes('student');
 
+    const { name, phone, semester, section } = req.body;
+
+    // Security Rule: Students cannot modify academic progression (semester, section, cgpa, rollNumber)
+    if (isStudent) {
+      const updatedUser = await prisma.user.update({
+        where: { id: student.userId },
+        data: { ...(phone ? { phone } : {}) }
+      });
+
+      return res.json({
+        id: student.id,
+        name: updatedUser.name,
+        semester: student.semester
+      });
+    }
+
+    // Admin / HOD authorized updates
     await prisma.user.update({
       where: { id: student.userId },
-      data: { name, phone }
+      data: { ...(name ? { name } : {}), ...(phone ? { phone } : {}) }
     });
 
     const updated = await prisma.student.update({
-      where: { id: req.params.id },
-      data: { semester, section },
+      where: { id: student.id },
+      data: {
+        ...(semester !== undefined ? { semester: Number(semester) } : {}),
+        ...(section ? { section } : {})
+      },
       include: { user: true, department: true }
     });
 
@@ -163,10 +274,16 @@ export const updateStudent = async (req: Request, res: Response) => {
   }
 };
 
-export const getStudentAttendance = async (req: Request, res: Response) => {
+export const getStudentAttendance = async (req: AuthRequest, res: Response) => {
   try {
+    const scope = await resolveStudentScope(req, req.params.id);
+    if (!scope.authorized) {
+      return res.status(scope.status).json({ success: false, message: scope.message });
+    }
+    const studentId = scope.studentId;
+
     const records = await prisma.attendanceRecord.findMany({
-      where: { studentId: req.params.id },
+      where: { studentId },
       include: { course: true }
     });
 
@@ -188,11 +305,11 @@ export const getStudentAttendance = async (req: Request, res: Response) => {
       subjectName: stat.course.name,
       totalClasses: stat.total,
       attendedClasses: stat.attended,
-      percentage: (stat.attended / stat.total) * 100
+      percentage: stat.total > 0 ? (stat.attended / stat.total) * 100 : 0
     }));
 
     res.json({
-      studentId: req.params.id,
+      studentId,
       overallPercentage,
       totalLectures,
       attendedLectures,
@@ -204,11 +321,28 @@ export const getStudentAttendance = async (req: Request, res: Response) => {
   }
 };
 
-export const getStudentGrades = async (req: Request, res: Response) => {
+export const getStudentGrades = async (req: AuthRequest, res: Response) => {
   try {
+    const scope = await resolveStudentScope(req, req.params.id);
+    if (!scope.authorized) {
+      return res.status(scope.status).json({ success: false, message: scope.message });
+    }
+    const studentId = scope.studentId;
+    const isStudent = req.user?.role === 'student' || req.user?.roles?.includes('student');
+
+    // Security Rule: Students only see results from evaluated/published exams or unlinked assignments
+    const whereClause: any = { studentId };
+    if (isStudent) {
+      whereClause.OR = [
+        { examinationId: null },
+        { examination: { status: 'evaluated' } },
+        { examination: { status: 'completed' } }
+      ];
+    }
+
     const results = await prisma.examResult.findMany({
-      where: { studentId: req.params.id },
-      include: { course: true }
+      where: whereClause,
+      include: { course: true, examination: true }
     });
     
     const grouped = new Map<number, typeof results>();
@@ -250,10 +384,17 @@ export const getStudentGrades = async (req: Request, res: Response) => {
   }
 };
 
-export const getStudentDocuments = async (req: Request, res: Response) => {
+export const getStudentDocuments = async (req: AuthRequest, res: Response) => {
   try {
+    const scope = await resolveStudentScope(req, req.params.id);
+    if (!scope.authorized) {
+      return res.status(scope.status).json({ success: false, message: scope.message });
+    }
+    const studentId = scope.studentId;
+
     const docs = await prisma.documentRequest.findMany({
-      where: { studentId: req.params.id }
+      where: { studentId },
+      orderBy: { requestedAt: 'desc' }
     });
     res.json(docs);
   } catch (error) {
@@ -263,15 +404,14 @@ export const getStudentDocuments = async (req: Request, res: Response) => {
 
 export const getStudentFees = async (req: AuthRequest, res: Response) => {
   try {
-    if (req.user?.role === 'student') {
-      const ownProfile = await prisma.student.findUnique({ where: { userId: req.user.id }, select: { id: true } });
-      if (!ownProfile || ownProfile.id !== req.params.id) {
-        return res.status(403).json({ success: false, message: 'Students may only view their own fee ledger' });
-      }
+    const scope = await resolveStudentScope(req, req.params.id);
+    if (!scope.authorized) {
+      return res.status(scope.status).json({ success: false, message: scope.message });
     }
+    const studentId = scope.studentId;
 
     const student = await prisma.student.findUnique({
-      where: { id: req.params.id },
+      where: { id: studentId },
       include: {
         feeTransactions: { where: { status: 'success' } }
       }
@@ -284,7 +424,6 @@ export const getStudentFees = async (req: AuthRequest, res: Response) => {
     });
     
     if (!feeStructure) {
-      // Return a zero-balance placeholder instead of throwing a 422 error
       feeStructure = {
         id: 'unconfigured',
         program: student.degree || 'B.Tech',
@@ -310,12 +449,12 @@ export const getStudentFees = async (req: AuthRequest, res: Response) => {
 
     // Fetch all transactions for the ledger (success + pending)
     const allTransactions = await prisma.feeTransaction.findMany({
-      where: { studentId: req.params.id },
+      where: { studentId },
       orderBy: { createdAt: 'desc' }
     });
 
     res.json({
-      studentId: req.params.id,
+      studentId,
       totalAnnualFee,
       totalPaid,
       dueBalance,
@@ -327,7 +466,7 @@ export const getStudentFees = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const deleteStudent = async (req: Request, res: Response) => {
+export const deleteStudent = async (req: AuthRequest, res: Response) => {
   try {
     const student = await prisma.student.findUnique({ where: { id: req.params.id } });
     if (!student) return res.status(404).json({ success: false, message: 'Student not found' });

@@ -47,6 +47,7 @@ import libraryRoutes from './routes/libraryRoutes';
 import noticeRoutes from './routes/noticeRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import adminRoutes from './routes/adminRoutes';
+import documentRoutes from './routes/documentRoutes';
 
 const apiRouter = express.Router();
 apiRouter.use('/auth', authRoutes);
@@ -62,6 +63,7 @@ apiRouter.use('/library', libraryRoutes);
 apiRouter.use('/notices', noticeRoutes);
 apiRouter.use('/analytics', analyticsRoutes);
 apiRouter.use('/admin', adminRoutes);
+apiRouter.use('/documents', documentRoutes);
 
 app.use('/api', apiRouter);
 

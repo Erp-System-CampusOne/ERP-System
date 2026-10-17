@@ -1,34 +1,25 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import bcrypt from 'bcryptjs';
+import { AuthRequest } from '../middlewares/authMiddleware';
 
-export const getFacultyList = async (req: Request, res: Response) => {
+export const getFacultyList = async (req: AuthRequest, res: Response) => {
   try {
-    const { department, designation } = req.query;
+    const { department, search } = req.query;
     let whereClause: any = {};
-
-    if (department) {
-      // department param may be a name string or an ID — resolve to ID
-      const dept = await prisma.department.findFirst({
-        where: {
-          OR: [
-            { id: department as string },
-            { name: { equals: department as string, mode: 'insensitive' } },
-            { code: { equals: department as string, mode: 'insensitive' } },
-          ]
-        }
-      });
-      if (dept) whereClause.departmentId = dept.id;
-      else whereClause.departmentId = department;
+    if (department) whereClause.departmentId = department;
+    if (search) {
+      whereClause.OR = [
+        { employeeCode: { contains: search as string, mode: 'insensitive' } },
+        { user: { name: { contains: search as string, mode: 'insensitive' } } }
+      ];
     }
-
-    if (designation) whereClause.designation = designation;
 
     const faculty = await prisma.faculty.findMany({
       where: whereClause,
       include: {
-        user: true,
-        department: true
+        user: { select: { name: true, email: true, phone: true, avatarUrl: true } },
+        department: { select: { name: true } }
       }
     });
 
@@ -52,29 +43,59 @@ export const getFacultyList = async (req: Request, res: Response) => {
   }
 };
 
-export const createFaculty = async (req: Request, res: Response) => {
+export const createFaculty = async (req: AuthRequest, res: Response) => {
   try {
     const { name, email, phone, department, designation, qualification } = req.body;
     const employeeCode = `FAC${new Date().getFullYear()}${Math.floor(100 + Math.random() * 900)}`;
     const defaultPassword = await bcrypt.hash('faculty123', 10);
 
-    const created = await prisma.user.create({
-      data: {
-        name,
-        email,
-        phone,
-        password: defaultPassword,
-        role: 'faculty',
-        facultyProfile: {
-          create: {
-            employeeCode,
-            departmentId: department,
-            designation,
-            qualification
+    const created = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.create({
+        data: {
+          name,
+          email,
+          phone,
+          password: defaultPassword,
+          role: 'faculty',
+          facultyProfile: {
+            create: {
+              employeeCode,
+              departmentId: department,
+              designation,
+              qualification
+            }
           }
+        },
+        include: { facultyProfile: { include: { department: true } } }
+      });
+
+      // Synchronize canonical userCredential
+      await tx.userCredential.create({
+        data: {
+          userId: u.id,
+          credentialType: 'password',
+          passwordHash: defaultPassword,
+          algorithm: 'bcrypt',
+          requiresChange: false,
+          failedLoginAttempts: 0,
+          lockedUntil: null
         }
-      },
-      include: { facultyProfile: { include: { department: true } } }
+      });
+
+      // Synchronize canonical userRoleAssignment
+      const canonicalRole = await tx.appRole.findUnique({ where: { code: 'faculty' } });
+      if (canonicalRole) {
+        await tx.userRoleAssignment.create({
+          data: {
+            userId: u.id,
+            roleId: canonicalRole.id,
+            isActive: true,
+            validFrom: new Date()
+          }
+        });
+      }
+
+      return u;
     });
 
     res.json({
@@ -85,15 +106,41 @@ export const createFaculty = async (req: Request, res: Response) => {
       department: created.facultyProfile?.department.name,
       designation: created.facultyProfile?.designation
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Failed to create faculty:', error);
+    if (error.code === 'P2002') {
+      return res.status(400).json({ success: false, message: 'A user with this email or phone already exists.' });
+    }
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
-export const getFacultyById = async (req: Request, res: Response) => {
+export const getFacultyById = async (req: AuthRequest, res: Response) => {
   try {
+    let facultyId = req.params.id;
+    if (facultyId === 'me') {
+      const own = await prisma.faculty.findUnique({
+        where: { userId: req.user?.id },
+        include: { user: true, department: true }
+      });
+      if (!own) return res.status(404).json({ success: false, message: 'Faculty profile not found' });
+      return res.json({
+        id: own.id,
+        employeeCode: own.employeeCode,
+        name: own.user.name,
+        email: own.user.email,
+        phone: own.user.phone,
+        department: own.department.name,
+        designation: own.designation,
+        qualification: own.qualification,
+        weeklyWorkloadHours: own.weeklyWorkloadHours,
+        leaveBalance: own.leaveBalance,
+        avatarUrl: own.user.avatarUrl
+      });
+    }
+
     const faculty = await prisma.faculty.findUnique({
-      where: { id: req.params.id },
+      where: { id: facultyId },
       include: { user: true, department: true }
     });
     
@@ -117,21 +164,45 @@ export const getFacultyById = async (req: Request, res: Response) => {
   }
 };
 
-export const updateFaculty = async (req: Request, res: Response) => {
+export const updateFaculty = async (req: AuthRequest, res: Response) => {
   try {
     const { name, phone, designation, qualification } = req.body;
     
     const faculty = await prisma.faculty.findUnique({ where: { id: req.params.id } });
     if (!faculty) return res.status(404).json({ success: false, message: 'Not found' });
 
+    const isPrivileged = req.user?.role === 'admin' || req.user?.role === 'hod' ||
+      req.user?.roles?.some(r => ['admin', 'hod'].includes(r));
+
+    // Non-privileged faculty can only update their own profile and cannot change designation
+    if (!isPrivileged) {
+      if (faculty.userId !== req.user?.id) {
+        return res.status(403).json({ success: false, message: 'Access denied: Faculty may only update their own profile' });
+      }
+
+      await prisma.user.update({
+        where: { id: faculty.userId },
+        data: { ...(phone ? { phone } : {}) }
+      });
+
+      const updated = await prisma.faculty.update({
+        where: { id: req.params.id },
+        data: { ...(qualification ? { qualification } : {}) },
+        include: { user: true }
+      });
+
+      return res.json({ id: updated.id, name: updated.user.name, designation: updated.designation });
+    }
+
+    // Admin / HOD privileged update
     await prisma.user.update({
       where: { id: faculty.userId },
-      data: { name, phone }
+      data: { ...(name ? { name } : {}), ...(phone ? { phone } : {}) }
     });
 
     const updated = await prisma.faculty.update({
       where: { id: req.params.id },
-      data: { designation, qualification },
+      data: { ...(designation ? { designation } : {}), ...(qualification ? { qualification } : {}) },
       include: { user: true }
     });
 
@@ -141,7 +212,7 @@ export const updateFaculty = async (req: Request, res: Response) => {
   }
 };
 
-export const getFacultyWorkload = async (req: Request, res: Response) => {
+export const getFacultyWorkload = async (req: AuthRequest, res: Response) => {
   try {
     const timetables = await prisma.timetableEntry.findMany({
       where: { facultyId: req.params.id },
@@ -180,8 +251,18 @@ export const getFacultyWorkload = async (req: Request, res: Response) => {
   }
 };
 
-export const getLeaveRequests = async (req: Request, res: Response) => {
+export const getLeaveRequests = async (req: AuthRequest, res: Response) => {
   try {
+    const faculty = await prisma.faculty.findUnique({ where: { id: req.params.id } });
+    if (!faculty) return res.status(404).json({ success: false, message: 'Faculty not found' });
+
+    const isPrivileged = req.user?.role === 'admin' || req.user?.role === 'hod' ||
+      req.user?.roles?.some(r => ['admin', 'hod'].includes(r));
+
+    if (!isPrivileged && faculty.userId !== req.user?.id) {
+      return res.status(403).json({ success: false, message: 'Access denied: Faculty may only view their own leaves' });
+    }
+
     const leaves = await prisma.leaveRequest.findMany({
       where: { facultyId: req.params.id }
     });
@@ -191,7 +272,7 @@ export const getLeaveRequests = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteFaculty = async (req: Request, res: Response) => {
+export const deleteFaculty = async (req: AuthRequest, res: Response) => {
   try {
     const faculty = await prisma.faculty.findUnique({ where: { id: req.params.id } });
     if (!faculty) return res.status(404).json({ success: false, message: 'Faculty not found' });

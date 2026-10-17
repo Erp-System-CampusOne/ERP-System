@@ -12,13 +12,13 @@ export const getInstitutionalOverview = async (req: Request, res: Response) => {
       }),
       prisma.department.count(),
       prisma.course.count(),
-      prisma.researchGrant.aggregate({
-        _sum: { amount: true },
-      })
+      (prisma as any).researchGrant
+        ? (prisma as any).researchGrant.aggregate({ _sum: { amount: true } })
+        : Promise.resolve({ _sum: { amount: 0 } })
     ]);
 
-    const totalFeeRevenue = feeRevResult._sum.amount || 0;
-    const totalResearchGrants = researchGrantsResult._sum.amount || 0;
+    const totalFeeRevenue = feeRevResult?._sum?.amount || 0;
+    const totalResearchGrants = (researchGrantsResult as any)?._sum?.amount || 0;
 
     // Compute average attendance from AttendanceRecord
     const allRecords = await prisma.attendanceRecord.findMany({ select: { status: true } });
@@ -53,7 +53,8 @@ export const getInstitutionalOverview = async (req: Request, res: Response) => {
       nirfRankingScore
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('[AnalyticsController] getInstitutionalOverview error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: String(error) });
   }
 };
 
@@ -302,15 +303,19 @@ export const getSystemActivity = async (req: Request, res: Response) => {
 export const getFinancialHealthAnalytics = async (req: Request, res: Response) => {
   try {
     const [expenses, departments, grants] = await Promise.all([
-      prisma.expenseRecord.findMany({ include: { department: true } }),
+      (prisma as any).expenseRecord
+        ? (prisma as any).expenseRecord.findMany({ include: { department: true } })
+        : Promise.resolve<any[]>([]),
       prisma.department.findMany(),
-      prisma.researchGrant.findMany()
+      (prisma as any).researchGrant
+        ? (prisma as any).researchGrant.findMany()
+        : Promise.resolve<any[]>([])
     ]);
 
     // Group expenses by category for Expense Breakdown
     const expenseByCategory = new Map<string, number>();
     let totalExpenses = 0;
-    expenses.forEach(e => {
+    expenses.forEach((e: any) => {
       expenseByCategory.set(e.category, (expenseByCategory.get(e.category) || 0) + e.amount);
       totalExpenses += e.amount;
     });
@@ -318,7 +323,7 @@ export const getFinancialHealthAnalytics = async (req: Request, res: Response) =
 
     // Group expenses by department for Budget Utilization
     const deptUtilizationMap = new Map<string, number>();
-    expenses.forEach(e => {
+    expenses.forEach((e: any) => {
       const deptName = e.department?.name || 'Central Admin';
       deptUtilizationMap.set(deptName, (deptUtilizationMap.get(deptName) || 0) + e.amount);
     });

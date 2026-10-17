@@ -7,6 +7,6 @@ const router = Router();
 router.use(authenticateJWT);
 
 router.post('/mark', authorizeRoles('faculty', 'admin'), markAttendance);
-router.get('/report', authorizeRoles('admin', 'hod', 'management'), getAttendanceReport);
+router.get('/report', authorizeRoles('admin', 'hod', 'analytics', 'management'), getAttendanceReport);
 
 export default router;

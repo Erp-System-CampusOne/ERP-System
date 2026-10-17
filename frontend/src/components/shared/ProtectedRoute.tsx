@@ -37,7 +37,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   const isAnalyticsRoute = location.pathname === '/analytics' || location.pathname.startsWith('/analytics/');
-  if (isAnalyticsRoute && role !== 'management' && role !== 'admin' && role !== 'hod') {
+  if (isAnalyticsRoute && role !== 'management' && role !== 'analytics' && role !== 'admin' && role !== 'hod') {
     return <Navigate to={getDashboardPath(role)} replace />;
   }
 

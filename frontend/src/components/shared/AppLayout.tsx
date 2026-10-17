@@ -80,6 +80,8 @@ const ROLE_CONFIG: Record<string, { nav: typeof STUDENT_NAV; title: string; colo
   finance_officer: { nav: FINANCE_NAV, title: 'Finance Office', color: 'bg-warning' },
   librarian: { nav: LIBRARY_NAV, title: 'Library System', color: 'bg-destructive' },
   management: { nav: ANALYTICS_NAV, title: 'Analytics', color: 'bg-info' },
+  analytics: { nav: ANALYTICS_NAV, title: 'Analytics', color: 'bg-info' },
+  examiner: { nav: FACULTY_NAV, title: 'Examiner Portal', color: 'bg-primary' },
 };
 
 interface AppLayoutProps {
