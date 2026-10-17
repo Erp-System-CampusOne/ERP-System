@@ -3,9 +3,8 @@ dist
 .env
 .DS_Store
 
-# Sensitive database backups containing PII/credentials
+# Sensitive database backups containing raw credentials / un-sanitized dumps
 docs/source-data-backup.sql
-docs/source-data-backup.json
 docs/phase0-diagnostic-output.txt
 *.backup
 *.dump

@@ -23,7 +23,7 @@ const { seedP14MasterData } = require('./seed_p1_4_master_data');
 const { seedP2Backfill } = require('./seed_p2_backfill');
 
 // Dedicated disposable test target configuration
-const DISPOSABLE_DB_URL = process.env.TEST_DATABASE_URL || 'postgresql://postgres@127.0.0.1:5433/postgres';
+const DISPOSABLE_DB_URL = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5433/postgres';
 const TEST_SCHEMA = 'p2_disposable_validation';
 
 /**
