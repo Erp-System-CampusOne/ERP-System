@@ -265,10 +265,10 @@ export default function VerifyEmail() {
                         type="button"
                         variant="ghost"
                         className="w-full"
-                        onClick={() => navigate('/signup')}
+                        onClick={() => navigate('/login')}
                       >
                         <ArrowLeft className="w-4 h-4 mr-2" />
-                        Back to Signup
+                        Back to Login
                       </Button>
                     </motion.div>
                   </Wrapper>

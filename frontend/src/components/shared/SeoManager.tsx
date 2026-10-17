@@ -5,8 +5,9 @@ const SITE = 'CampusOne';
 const ORIGIN = 'https://campusone.edu';
 
 const pageNames: Record<string, string> = {
-  '/login': 'Sign in', '/signup': 'Create an account', '/forgot-password': 'Forgot password',
+  '/login': 'Sign in', '/forgot-password': 'Forgot password',
   '/reset-password': 'Reset password', '/verify-email': 'Verify email', '/not-found': 'Page not found',
+  '/hod': 'HOD Command Center',
   '/student': 'Student dashboard', '/student/courses': 'Student courses', '/student/attendance': 'Student attendance',
   '/student/timetable': 'Student timetable', '/student/exams': 'Student examinations', '/student/fees': 'Student fees',
   '/student/library': 'Student library', '/student/documents': 'Student documents', '/faculty': 'Faculty dashboard',
