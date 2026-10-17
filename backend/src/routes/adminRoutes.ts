@@ -5,6 +5,8 @@ import {
   createAdminUser,
   getActiveInstitutionHod,
   relieveInstitutionHod,
+  getDepartmentHods,
+  relieveDepartmentHod,
   getExaminers,
   assignExaminer
 } from '../controllers/adminController';
@@ -22,7 +24,11 @@ router.put('/roles/:role/permissions', authorizeRoles('admin'), updateRolePermis
 // User provisioning: Admin can create all roles, HOD can create faculty/student/examiner
 router.post('/users', authorizeRoles('admin', 'hod'), createAdminUser);
 
-// Institution-wide Single HOD governance
+// Department HOD Management
+router.get('/hods', authorizeRoles('admin', 'analytics', 'management'), getDepartmentHods);
+router.post('/hods/relieve/:departmentId', authorizeRoles('admin'), relieveDepartmentHod);
+
+// Institution-wide HOD governance (legacy fallback)
 router.get('/hod/active', authorizeRoles('admin', 'hod', 'analytics', 'management'), getActiveInstitutionHod);
 router.post('/hod/relieve', authorizeRoles('admin'), relieveInstitutionHod);
 

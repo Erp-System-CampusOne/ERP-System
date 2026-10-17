@@ -46,6 +46,7 @@ const HodDashboard = lazy(() => import('../pages/HodDashboard'));
 const Admin = lazy(() => import('../pages/Admin'));
 const AdminStudents = lazy(() => import('../pages/AdminStudents'));
 const AdminFaculty = lazy(() => import('../pages/AdminFaculty'));
+const AdminHod = lazy(() => import('../pages/AdminHod'));
 const AdminAcademics = lazy(() => import('../pages/AdminAcademics'));
 const AdminTimetableBuilder = lazy(() => import('../pages/AdminTimetableBuilder'));
 const AdminExaminations = lazy(() => import('../pages/AdminExaminations'));
@@ -298,6 +299,16 @@ export const router = createBrowserRouter([
       <ProtectedRoute>
         <RouteBoundary routeId="admin-faculty">
           <AdminFaculty />
+        </RouteBoundary>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/hod',
+    element: (
+      <ProtectedRoute>
+        <RouteBoundary routeId="admin-hod">
+          <AdminHod />
         </RouteBoundary>
       </ProtectedRoute>
     ),

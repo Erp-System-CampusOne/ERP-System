@@ -14,7 +14,7 @@ const pageNames: Record<string, string> = {
   '/faculty/attendance': 'Faculty attendance', '/faculty/classes': 'Faculty classes', '/faculty/grading': 'Grade entry',
   '/faculty/leaves': 'Leave management', '/faculty/timetable': 'Faculty timetable', '/faculty/department': 'Department management',
   '/admin': 'Administration dashboard', '/admin/students': 'Student directory',
-  '/admin/faculty': 'Faculty directory', '/admin/academics': 'Academics management', '/admin/timetable-builder': 'Timetable builder',
+  '/admin/faculty': 'Faculty directory', '/admin/hod': 'HOD Management', '/admin/academics': 'Academics management', '/admin/timetable-builder': 'Timetable builder',
   '/admin/examinations': 'Examinations', '/admin/notices': 'Campus notices', '/admin/roles': 'Access roles',
   '/finance': 'Finance dashboard', '/finance/structures': 'Fee structures', '/finance/dues': 'Fee dues',
   '/finance/transactions': 'Payment ledger', '/finance/reports': 'Financial analytics', '/library': 'Library dashboard',

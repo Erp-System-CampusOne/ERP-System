@@ -20,7 +20,8 @@ import {
   updateAdmissionStatus, saveTimetable,
   createAdminUser,
   getDocumentQueue, approveDocumentRequest, rejectDocumentRequest,
-  getExaminers, assignExaminer
+  getExaminers, assignExaminer,
+  getDepartmentHods, relieveDepartmentHod
 } from '@/api/apiCall';
 import type { DepartmentInput } from '@/api/apiInterface';
 
@@ -304,6 +305,27 @@ export function useAssignExaminerMutation() {
     mutationFn: assignExaminer,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'examiners'] });
+    },
+  });
+}
+
+export function useDepartmentHods() {
+  return useQuery({
+    queryKey: ['admin', 'hods'],
+    queryFn: async () => {
+      const res = await getDepartmentHods();
+      return res.departments || [];
+    },
+  });
+}
+
+export function useRelieveDepartmentHod() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: relieveDepartmentHod,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'hods'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'departments'] });
     },
   });
 }

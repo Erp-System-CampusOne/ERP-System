@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { 
   Users, GraduationCap, BookOpen, FileText, 
-  Bell, Shield, DollarSign, ArrowRight, UserCheck, AlertTriangle
+  Bell, Shield, DollarSign, ArrowRight, UserCheck, AlertTriangle, ShieldCheck
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -280,9 +280,10 @@ export default function Admin() {
 
         <div className="space-y-3">
           <h2 className="font-display text-xl font-semibold tracking-tight">Quick Actions</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <QuickAction href="/admin/students" icon={GraduationCap} label="Students" description="Manage student records" color="bg-emerald-500" />
             <QuickAction href="/admin/faculty" icon={Users} label="Faculty" description="Faculty directory" color="bg-blue-500" />
+            <QuickAction href="/admin/hod" icon={ShieldCheck} label="HODs" description="Department heads" color="bg-purple-600" />
             <QuickAction href="/admin/academics" icon={BookOpen} label="Academics" description="Courses & curriculum" color="bg-violet-500" />
             <QuickAction href="/admin/examinations" icon={FileText} label="Examinations" description="Exam management" color="bg-amber-500" />
           </div>

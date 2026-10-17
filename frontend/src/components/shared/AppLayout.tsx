@@ -4,7 +4,7 @@ import {
   BookOpen, Users, Shield, Library, BarChart3, 
   GraduationCap, Home, Calendar, BookMarked, FileText, 
   DollarSign, ClipboardList, Settings, LogOut, Menu, X,
-  Bell, Moon, Sun, ChevronDown, FileCheck
+  Bell, Moon, Sun, ChevronDown, FileCheck, ShieldCheck
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -46,6 +46,7 @@ const ADMIN_NAV = [
   { href: '/admin', label: 'Dashboard', icon: Home },
   { href: '/admin/students', label: 'Students', icon: GraduationCap },
   { href: '/admin/faculty', label: 'Faculty', icon: Users },
+  { href: '/admin/hod', label: 'HODs', icon: ShieldCheck },
   { href: '/admin/academics', label: 'Academics', icon: BookOpen },
   { href: '/admin/timetable-builder', label: 'Timetable', icon: Calendar },
   { href: '/admin/examinations', label: 'Exams', icon: FileText },

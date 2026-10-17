@@ -155,16 +155,33 @@ export const createAdminUser = async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, message: 'Insufficient privileges to create users' });
     }
 
-    // Single Institution-Wide HOD Enforcement:
+    // Department-level HOD Validation:
     if (role === 'hod') {
-      const activeHod = await prisma.institutionHodAssignment.findFirst({
-        where: { isActive: true },
-        include: { user: { select: { id: true, name: true, email: true } } }
-      });
-      if (activeHod) {
+      if (!departmentId && !department) {
+        return res.status(400).json({
+          success: false,
+          message: 'Department is required when onboarding an HOD'
+        });
+      }
+
+      const targetDept = departmentId
+        ? await prisma.department.findUnique({
+            where: { id: departmentId },
+            include: { headOfDepartment: { include: { user: true } } }
+          })
+        : await prisma.department.findFirst({
+            where: { name: department },
+            include: { headOfDepartment: { include: { user: true } } }
+          });
+
+      if (!targetDept) {
+        return res.status(404).json({ success: false, message: 'Specified department not found' });
+      }
+
+      if (targetDept.headOfDepartment) {
         return res.status(409).json({
           success: false,
-          message: `An active institution-wide HOD already exists (${activeHod.user.name} - ${activeHod.user.email}). Relieve the current HOD before appointing a new one.`
+          message: `Department "${targetDept.name}" already has an active HOD (${targetDept.headOfDepartment.user.name}). Please relieve the current HOD first or select another department.`
         });
       }
     }
@@ -330,6 +347,125 @@ export const relieveInstitutionHod = async (req: Request, res: Response) => {
 
     res.json({ success: true, message: 'Institution HOD successfully relieved' });
   } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const getDepartmentHods = async (req: Request, res: Response) => {
+  try {
+    const departments = await prisma.department.findMany({
+      include: {
+        headOfDepartment: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                avatarUrl: true,
+                createdAt: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            faculty: true,
+            students: true,
+            courses: true,
+          },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    const formatted = departments.map((dept) => ({
+      departmentId: dept.id,
+      departmentCode: dept.code,
+      departmentName: dept.name,
+      isAppointed: !!dept.headOfDepartment,
+      hod: dept.headOfDepartment
+        ? {
+            facultyId: dept.headOfDepartment.id,
+            userId: dept.headOfDepartment.userId,
+            name: dept.headOfDepartment.user.name,
+            email: dept.headOfDepartment.user.email,
+            phone: dept.headOfDepartment.user.phone,
+            employeeCode: dept.headOfDepartment.employeeCode,
+            designation: dept.headOfDepartment.designation,
+            qualification: dept.headOfDepartment.qualification,
+            avatarUrl: dept.headOfDepartment.user.avatarUrl,
+            appointedAt: dept.headOfDepartment.createdAt,
+          }
+        : null,
+      facultyCount: dept._count.faculty,
+      studentCount: dept._count.students,
+      courseCount: dept._count.courses,
+    }));
+
+    res.json({ success: true, departments: formatted });
+  } catch (error) {
+    console.error('[AdminController] getDepartmentHods error', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const relieveDepartmentHod = async (req: Request, res: Response) => {
+  try {
+    const { departmentId } = req.params;
+    if (!departmentId) {
+      return res.status(400).json({ success: false, message: 'Department ID is required' });
+    }
+
+    const dept = await prisma.department.findUnique({
+      where: { id: departmentId },
+      include: {
+        headOfDepartment: {
+          include: { user: true },
+        },
+      },
+    });
+
+    if (!dept) {
+      return res.status(404).json({ success: false, message: 'Department not found' });
+    }
+
+    if (!dept.headOfDepartment) {
+      return res.status(400).json({ success: false, message: 'Department currently has no appointed HOD' });
+    }
+
+    const formerHodUserId = dept.headOfDepartment.userId;
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Clear HOD link on department
+      await tx.department.update({
+        where: { id: departmentId },
+        data: { headOfDepartmentId: null },
+      });
+
+      // 2. Relieve any active institution HOD assignment for this user
+      await tx.institutionHodAssignment.updateMany({
+        where: { userId: formerHodUserId, isActive: true },
+        data: { isActive: false, relievedAt: new Date() },
+      });
+
+      // 3. Mark canonical HOD role assignment inactive if present
+      const hodRole = await tx.appRole.findUnique({ where: { code: 'hod' } });
+      if (hodRole) {
+        await tx.userRoleAssignment.updateMany({
+          where: { userId: formerHodUserId, roleId: hodRole.id, isActive: true },
+          data: { isActive: false, validTo: new Date() },
+        });
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `HOD for Department of ${dept.name} has been successfully relieved.`,
+    });
+  } catch (error) {
+    console.error('[AdminController] relieveDepartmentHod error', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };

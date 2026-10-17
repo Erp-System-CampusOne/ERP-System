@@ -1,5 +1,6 @@
 import { Course } from '@/api/apiInterface';
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   BookOpen, Plus, Search, X, Pencil, Trash2
@@ -146,7 +147,15 @@ export default function AdminAcademics() {
 
       <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">
         <Card className="mb-6 border-2 border-border/60">
-          <CardHeader><CardTitle className="text-lg font-display">Departments</CardTitle><CardDescription>{departments?.length ?? 0} departments</CardDescription></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-lg font-display">Departments</CardTitle>
+              <CardDescription>{departments?.length ?? 0} departments</CardDescription>
+            </div>
+            <Link to="/admin/hod" className="text-xs text-primary font-medium hover:underline">
+              Manage HODs &rarr;
+            </Link>
+          </CardHeader>
           <CardContent>
             {showDepartmentForm && <form className="mb-5 flex flex-col md:flex-row gap-3" onSubmit={async (event) => { event.preventDefault(); await departmentMutations.create.mutateAsync(departmentForm); setDepartmentForm({ code: '', name: '' }); setShowDepartmentForm(false); }}>
               <Input required placeholder="Code" value={departmentForm.code} onChange={(e) => setDepartmentForm({ ...departmentForm, code: e.target.value })} />
