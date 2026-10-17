@@ -21,7 +21,7 @@ import {
   createAdminUser,
   getDocumentQueue, approveDocumentRequest, rejectDocumentRequest,
   getExaminers, assignExaminer,
-  getDepartmentHods, relieveDepartmentHod
+  getDepartmentHods, relieveDepartmentHod, relieveInstitutionHod, promoteFacultyToHod
 } from '@/api/apiCall';
 import type { DepartmentInput } from '@/api/apiInterface';
 
@@ -309,6 +309,15 @@ export function useAssignExaminerMutation() {
   });
 }
 
+export function useInstitutionHod() {
+  return useQuery({
+    queryKey: ['admin', 'hods'],
+    queryFn: async () => {
+      return await getDepartmentHods();
+    },
+  });
+}
+
 export function useDepartmentHods() {
   return useQuery({
     queryKey: ['admin', 'hods'],
@@ -325,6 +334,30 @@ export function useRelieveDepartmentHod() {
     mutationFn: relieveDepartmentHod,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'hods'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'departments'] });
+    },
+  });
+}
+
+export function useRelieveInstitutionHod() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: relieveInstitutionHod,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'hods'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'departments'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'faculty'] });
+    },
+  });
+}
+
+export function usePromoteFacultyToHod() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: promoteFacultyToHod,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'hods'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'faculty'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'departments'] });
     },
   });

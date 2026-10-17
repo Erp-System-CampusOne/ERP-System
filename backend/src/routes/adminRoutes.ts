@@ -7,6 +7,7 @@ import {
   relieveInstitutionHod,
   getDepartmentHods,
   relieveDepartmentHod,
+  promoteFacultyToInstitutionHod,
   getExaminers,
   assignExaminer
 } from '../controllers/adminController';
@@ -28,9 +29,11 @@ router.post('/users', authorizeRoles('admin', 'hod'), createAdminUser);
 router.get('/hods', authorizeRoles('admin', 'analytics', 'management'), getDepartmentHods);
 router.post('/hods/relieve/:departmentId', authorizeRoles('admin'), relieveDepartmentHod);
 
-// Institution-wide HOD governance (legacy fallback)
+// Institution-wide HOD governance
 router.get('/hod/active', authorizeRoles('admin', 'hod', 'analytics', 'management'), getActiveInstitutionHod);
 router.post('/hod/relieve', authorizeRoles('admin'), relieveInstitutionHod);
+router.post('/hod/promote', authorizeRoles('admin'), promoteFacultyToInstitutionHod);
+router.post('/hods/promote', authorizeRoles('admin'), promoteFacultyToInstitutionHod);
 
 // Examiner management
 router.get('/examiners', authorizeRoles('admin', 'hod'), getExaminers);

@@ -155,33 +155,16 @@ export const createAdminUser = async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, message: 'Insufficient privileges to create users' });
     }
 
-    // Department-level HOD Validation:
+    // Institution-wide HOD Validation (Single HOD for the Entire Institution):
     if (role === 'hod') {
-      if (!departmentId && !department) {
-        return res.status(400).json({
-          success: false,
-          message: 'Department is required when onboarding an HOD'
-        });
-      }
-
-      const targetDept = departmentId
-        ? await prisma.department.findUnique({
-            where: { id: departmentId },
-            include: { headOfDepartment: { include: { user: true } } }
-          })
-        : await prisma.department.findFirst({
-            where: { name: department },
-            include: { headOfDepartment: { include: { user: true } } }
-          });
-
-      if (!targetDept) {
-        return res.status(404).json({ success: false, message: 'Specified department not found' });
-      }
-
-      if (targetDept.headOfDepartment) {
+      const activeHod = await prisma.institutionHodAssignment.findFirst({
+        where: { isActive: true },
+        include: { user: true }
+      });
+      if (activeHod) {
         return res.status(409).json({
           success: false,
-          message: `Department "${targetDept.name}" already has an active HOD (${targetDept.headOfDepartment.user.name}). Please relieve the current HOD first or select another department.`
+          message: `The institution already has an active Head of Department (${activeHod.user.name}). Please relieve the current HOD first before appointing a new one.`
         });
       }
     }
@@ -225,7 +208,7 @@ export const createAdminUser = async (req: Request, res: Response) => {
         });
       }
 
-      // If HOD, create institution_hod_assignments record & link department/faculty
+      // If HOD, create institution_hod_assignments record (Single Institution HOD)
       if (role === 'hod') {
         const inst = await tx.institution.findFirst();
         if (inst) {
@@ -238,25 +221,25 @@ export const createAdminUser = async (req: Request, res: Response) => {
             }
           });
         }
-        const dept = departmentId 
+        const homeDept = departmentId 
           ? await tx.department.findUnique({ where: { id: departmentId } })
           : (department ? await tx.department.findFirst({ where: { name: department } }) : await tx.department.findFirst());
-        if (dept) {
-          const empCode = req.body.employeeCode || `HOD${Date.now().toString().slice(-6)}`;
-          const hodFac = await tx.faculty.create({
+        if (homeDept) {
+          const empCode = req.body.employeeCode || `HOD-INST-${Math.floor(100 + Math.random() * 900)}`;
+          await tx.faculty.create({
             data: {
               userId: u.id,
-              departmentId: dept.id,
+              departmentId: homeDept.id,
               employeeCode: empCode,
-              designation: designation || 'Head of Department',
+              designation: designation || 'Institution Head of Department',
               qualification: req.body.qualification || 'Ph.D.'
             }
           });
-          await tx.department.update({
-            where: { id: dept.id },
-            data: { headOfDepartmentId: hodFac.id }
-          });
         }
+        // Ensure no individual department is exclusively tied to this HOD
+        await tx.department.updateMany({
+          data: { headOfDepartmentId: null }
+        });
       }
 
       // If Faculty, create Faculty profile
@@ -312,161 +295,249 @@ export const getActiveInstitutionHod = async (req: Request, res: Response) => {
     const active = await prisma.institutionHodAssignment.findFirst({
       where: { isActive: true },
       include: {
-        user: { select: { id: true, name: true, email: true, phone: true } },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            avatarUrl: true,
+            createdAt: true,
+            facultyProfile: {
+              include: { department: true }
+            }
+          }
+        },
         institution: { select: { id: true, name: true, code: true } }
       }
     });
-    res.json({ success: true, activeHod: active || null });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-};
 
-export const relieveInstitutionHod = async (req: Request, res: Response) => {
-  try {
-    const active = await prisma.institutionHodAssignment.findFirst({
-      where: { isActive: true }
-    });
-    if (!active) {
-      return res.status(404).json({ success: false, message: 'No active institution-wide HOD to relieve' });
-    }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.institutionHodAssignment.update({
-        where: { id: active.id },
-        data: { isActive: false, relievedAt: new Date() }
-      });
-      const hodRole = await tx.appRole.findUnique({ where: { code: 'hod' } });
-      if (hodRole) {
-        await tx.userRoleAssignment.updateMany({
-          where: { userId: active.userId, roleId: hodRole.id, isActive: true },
-          data: { isActive: false, validTo: new Date() }
-        });
+    const history = await prisma.institutionHodAssignment.findMany({
+      orderBy: { appointedAt: 'desc' },
+      include: {
+        user: { select: { id: true, name: true, email: true, phone: true } }
       }
     });
 
-    res.json({ success: true, message: 'Institution HOD successfully relieved' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-};
-
-export const getDepartmentHods = async (req: Request, res: Response) => {
-  try {
     const departments = await prisma.department.findMany({
       include: {
-        headOfDepartment: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                phone: true,
-                avatarUrl: true,
-                createdAt: true,
-              },
-            },
-          },
-        },
         _count: {
           select: {
             faculty: true,
             students: true,
             courses: true,
-          },
-        },
+          }
+        }
       },
-      orderBy: { name: 'asc' },
+      orderBy: { name: 'asc' }
     });
 
-    const formatted = departments.map((dept) => ({
-      departmentId: dept.id,
-      departmentCode: dept.code,
-      departmentName: dept.name,
-      isAppointed: !!dept.headOfDepartment,
-      hod: dept.headOfDepartment
-        ? {
-            facultyId: dept.headOfDepartment.id,
-            userId: dept.headOfDepartment.userId,
-            name: dept.headOfDepartment.user.name,
-            email: dept.headOfDepartment.user.email,
-            phone: dept.headOfDepartment.user.phone,
-            employeeCode: dept.headOfDepartment.employeeCode,
-            designation: dept.headOfDepartment.designation,
-            qualification: dept.headOfDepartment.qualification,
-            avatarUrl: dept.headOfDepartment.user.avatarUrl,
-            appointedAt: dept.headOfDepartment.createdAt,
-          }
-        : null,
-      facultyCount: dept._count.faculty,
-      studentCount: dept._count.students,
-      courseCount: dept._count.courses,
-    }));
+    const totalFacultyCount = departments.reduce((acc, d) => acc + d._count.faculty, 0);
+    const totalStudentCount = departments.reduce((acc, d) => acc + d._count.students, 0);
+    const totalCourseCount = departments.reduce((acc, d) => acc + d._count.courses, 0);
 
-    res.json({ success: true, departments: formatted });
+    const activeHodData = active ? {
+      assignmentId: active.id,
+      userId: active.userId,
+      name: active.user.name,
+      email: active.user.email,
+      phone: active.user.phone,
+      avatarUrl: active.user.avatarUrl,
+      employeeCode: active.user.facultyProfile?.employeeCode || 'HOD-INST-001',
+      designation: active.user.facultyProfile?.designation || 'Institution Head of Department',
+      qualification: active.user.facultyProfile?.qualification || 'Ph.D.',
+      homeDepartment: active.user.facultyProfile?.department?.name || 'All Divisions',
+      appointedAt: active.appointedAt,
+      institution: active.institution,
+      status: 'active'
+    } : null;
+
+    res.json({
+      success: true,
+      activeHod: activeHodData,
+      history,
+      departments: departments.map(d => ({
+        id: d.id,
+        departmentId: d.id,
+        code: d.code,
+        departmentCode: d.code,
+        name: d.name,
+        departmentName: d.name,
+        facultyCount: d._count.faculty,
+        studentCount: d._count.students,
+        courseCount: d._count.courses,
+        isAppointed: !!activeHodData,
+        hod: activeHodData
+      })),
+      totalDepartments: departments.length,
+      totalFacultyCount,
+      totalStudentCount,
+      totalCourseCount,
+    });
   } catch (error) {
-    console.error('[AdminController] getDepartmentHods error', error);
+    console.error('[AdminController] getActiveInstitutionHod error', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
-export const relieveDepartmentHod = async (req: Request, res: Response) => {
+export const getDepartmentHods = getActiveInstitutionHod;
+
+export const relieveInstitutionHod = async (req: Request, res: Response) => {
   try {
-    const { departmentId } = req.params;
-    if (!departmentId) {
-      return res.status(400).json({ success: false, message: 'Department ID is required' });
-    }
-
-    const dept = await prisma.department.findUnique({
-      where: { id: departmentId },
-      include: {
-        headOfDepartment: {
-          include: { user: true },
-        },
-      },
+    const active = await prisma.institutionHodAssignment.findFirst({
+      where: { isActive: true },
+      include: { user: true }
     });
-
-    if (!dept) {
-      return res.status(404).json({ success: false, message: 'Department not found' });
+    if (!active) {
+      return res.status(404).json({ success: false, message: 'No active institution-wide HOD to relieve' });
     }
 
-    if (!dept.headOfDepartment) {
-      return res.status(400).json({ success: false, message: 'Department currently has no appointed HOD' });
-    }
-
-    const formerHodUserId = dept.headOfDepartment.userId;
+    const formerHodUserId = active.userId;
+    const formerHodName = active.user.name;
 
     await prisma.$transaction(async (tx) => {
-      // 1. Clear HOD link on department
-      await tx.department.update({
-        where: { id: departmentId },
-        data: { headOfDepartmentId: null },
+      // 1. Mark institution HOD assignment inactive
+      await tx.institutionHodAssignment.update({
+        where: { id: active.id },
+        data: { isActive: false, relievedAt: new Date() }
       });
 
-      // 2. Relieve any active institution HOD assignment for this user
-      await tx.institutionHodAssignment.updateMany({
-        where: { userId: formerHodUserId, isActive: true },
-        data: { isActive: false, relievedAt: new Date() },
+      // 2. Clear any department-level headOfDepartmentId
+      await tx.department.updateMany({
+        data: { headOfDepartmentId: null }
       });
 
-      // 3. Mark canonical HOD role assignment inactive if present
+      // 3. Mark HOD role assignment inactive
       const hodRole = await tx.appRole.findUnique({ where: { code: 'hod' } });
       if (hodRole) {
         await tx.userRoleAssignment.updateMany({
           where: { userId: formerHodUserId, roleId: hodRole.id, isActive: true },
-          data: { isActive: false, validTo: new Date() },
+          data: { isActive: false, validTo: new Date() }
         });
       }
+
+      // 4. Demote user role back to faculty
+      await tx.user.update({
+        where: { id: formerHodUserId },
+        data: { role: 'faculty' as Role }
+      });
+
+      await tx.faculty.updateMany({
+        where: { userId: formerHodUserId },
+        data: { designation: 'Senior Professor' }
+      });
     });
 
     res.json({
       success: true,
-      message: `HOD for Department of ${dept.name} has been successfully relieved.`,
+      message: `Institution Head of Department (${formerHodName}) has been successfully relieved.`
     });
   } catch (error) {
-    console.error('[AdminController] relieveDepartmentHod error', error);
+    console.error('[AdminController] relieveInstitutionHod error', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const relieveDepartmentHod = relieveInstitutionHod;
+
+export const promoteFacultyToInstitutionHod = async (req: Request, res: Response) => {
+  try {
+    const { facultyId } = req.body;
+    if (!facultyId) {
+      return res.status(400).json({ success: false, message: 'Faculty ID is required' });
+    }
+
+    const faculty = await prisma.faculty.findUnique({
+      where: { id: facultyId },
+      include: { user: true, department: true }
+    });
+
+    if (!faculty) {
+      return res.status(404).json({ success: false, message: 'Faculty member not found' });
+    }
+
+    const inst = await prisma.institution.findFirst();
+    if (!inst) {
+      return res.status(404).json({ success: false, message: 'Institution record not found' });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Relieve any currently active HOD
+      await tx.institutionHodAssignment.updateMany({
+        where: { isActive: true },
+        data: { isActive: false, relievedAt: new Date() }
+      });
+
+      // Reset any previous HOD users back to faculty
+      await tx.user.updateMany({
+        where: { role: 'hod' as Role, id: { not: faculty.userId } },
+        data: { role: 'faculty' as Role }
+      });
+
+      // 2. Clear any department-level headOfDepartmentId
+      await tx.department.updateMany({
+        data: { headOfDepartmentId: null }
+      });
+
+      // 3. Promote target user to HOD role
+      await tx.user.update({
+        where: { id: faculty.userId },
+        data: { role: 'hod' as Role }
+      });
+
+      // 4. Update canonical user role assignments
+      const hodRole = await tx.appRole.findUnique({ where: { code: 'hod' } });
+      if (hodRole) {
+        // Deactivate any active HOD role assignments so trigger fn_enforce_single_active_hod allows the new one
+        await tx.userRoleAssignment.updateMany({
+          where: { roleId: hodRole.id, isActive: true },
+          data: { isActive: false, validTo: new Date() }
+        });
+
+        const existingRoleAssignment = await tx.userRoleAssignment.findFirst({
+          where: { userId: faculty.userId, roleId: hodRole.id }
+        });
+        if (existingRoleAssignment) {
+          await tx.userRoleAssignment.update({
+            where: { id: existingRoleAssignment.id },
+            data: { isActive: true, validFrom: new Date(), validTo: null }
+          });
+        } else {
+          await tx.userRoleAssignment.create({
+            data: {
+              userId: faculty.userId,
+              roleId: hodRole.id,
+              isActive: true,
+              validFrom: new Date()
+            }
+          });
+        }
+      }
+
+      // 5. Update Faculty designation
+      await tx.faculty.update({
+        where: { id: faculty.id },
+        data: { designation: 'Institution Head of Department' }
+      });
+
+      // 6. Create active Institution HOD assignment
+      await tx.institutionHodAssignment.create({
+        data: {
+          institutionId: inst.id,
+          userId: faculty.userId,
+          isActive: true,
+          appointedAt: new Date()
+        }
+      });
+    });
+
+    res.json({
+      success: true,
+      message: `${faculty.user.name} from ${faculty.department.name} has been promoted to Institution Head of Department.`
+    });
+  } catch (error) {
+    console.error('[AdminController] promoteFacultyToInstitutionHod error', error);
+    res.status(500).json({ success: false, message: 'Server error promoting faculty to HOD' });
   }
 };
 

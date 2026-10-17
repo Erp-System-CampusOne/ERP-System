@@ -287,26 +287,29 @@ export default function HodDashboard() {
             <div>
               <div className="flex items-center gap-3">
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary border border-primary/30">
-                  Head of Department Portal
+                  Institution Head of Department
                 </span>
                 <span className="text-xs text-muted-foreground">Academic Year 2026-2027</span>
                 {departments.length > 1 && (
-                  <select
-                    className="h-7 text-xs rounded-md border border-border bg-background px-2 font-medium"
-                    value={effectiveDeptId}
-                    onChange={(e) => setSelectedDeptId(e.target.value)}
-                  >
-                    {departments.map((d: any) => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center gap-1.5 bg-background/90 px-2.5 py-1 rounded-lg border border-border shadow-xs">
+                    <span className="text-xs text-muted-foreground font-medium">Active Division:</span>
+                    <select
+                      className="h-5 text-xs bg-transparent border-0 font-semibold focus:outline-none cursor-pointer text-primary"
+                      value={effectiveDeptId}
+                      onChange={(e) => setSelectedDeptId(e.target.value)}
+                    >
+                      {departments.map((d: any) => (
+                        <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
+                      ))}
+                    </select>
+                  </div>
                 )}
               </div>
               <h1 className="font-display text-2xl md:text-3xl font-bold tracking-tight mt-1 text-foreground">
-                {deptName}
+                Academic Command Center — {deptName}
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Executive Command Center • {user?.name || 'Head of Department'} • Direct User Provisioning • Curricula & Timetable
+                Institutional Executive Leadership • {user?.name || 'Head of Department'} • Curricula, Timetable & Staff Oversight
               </p>
             </div>
 
