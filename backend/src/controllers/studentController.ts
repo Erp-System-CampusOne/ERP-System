@@ -83,13 +83,14 @@ export const getStudents = async (req: AuthRequest, res: Response) => {
     const students = await prisma.student.findMany({
       where: whereClause,
       include: {
-        user: { select: { name: true, email: true, phone: true, avatarUrl: true } },
+        user: { select: { campusId: true, name: true, email: true, phone: true, avatarUrl: true } },
         department: { select: { name: true } }
       }
     });
 
     const formatted = students.map(s => ({
       id: s.id,
+      campusId: s.user.campusId,
       rollNumber: s.rollNumber,
       name: s.user.name,
       email: s.user.email,
@@ -199,6 +200,7 @@ export const createStudent = async (req: AuthRequest, res: Response) => {
     if (student.studentProfile) {
       res.json({
         id: student.studentProfile.id,
+        campusId: student.campusId,
         rollNumber: student.studentProfile.rollNumber,
         name: student.name,
         email: student.email,
@@ -227,6 +229,7 @@ export const getStudentById = async (req: AuthRequest, res: Response) => {
     
     res.json({
       id: student.id,
+      campusId: student.user.campusId,
       rollNumber: student.rollNumber,
       name: student.user.name,
       email: student.user.email,

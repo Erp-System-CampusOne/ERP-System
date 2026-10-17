@@ -35,6 +35,7 @@ export interface GenericStatusResponse {
 
 export interface Student {
   id: string;
+  campusId?: string;
   rollNumber: string;
   name: string;
   email: string;
@@ -124,6 +125,7 @@ export interface GradeCard {
 
 export interface Faculty {
   id: string;
+  campusId?: string;
   employeeCode: string;
   name: string;
   email: string;

@@ -19,13 +19,14 @@ export const getFacultyList = async (req: AuthRequest, res: Response) => {
     const faculty = await prisma.faculty.findMany({
       where: whereClause,
       include: {
-        user: { select: { name: true, email: true, phone: true, avatarUrl: true } },
+        user: { select: { campusId: true, name: true, email: true, phone: true, avatarUrl: true } },
         department: { select: { name: true } }
       }
     });
 
     const formatted = faculty.map(f => ({
       id: f.id,
+      campusId: f.user.campusId,
       employeeCode: f.employeeCode,
       name: f.user.name,
       email: f.user.email,
@@ -103,6 +104,7 @@ export const createFaculty = async (req: AuthRequest, res: Response) => {
 
     res.json({
       id: created.facultyProfile?.id,
+      campusId: created.campusId,
       employeeCode: created.facultyProfile?.employeeCode,
       name: created.name,
       email: created.email,
@@ -129,6 +131,7 @@ export const getFacultyById = async (req: AuthRequest, res: Response) => {
       if (!own) return res.status(404).json({ success: false, message: 'Faculty profile not found' });
       return res.json({
         id: own.id,
+        campusId: own.user.campusId,
         employeeCode: own.employeeCode,
         name: own.user.name,
         email: own.user.email,
@@ -151,6 +154,7 @@ export const getFacultyById = async (req: AuthRequest, res: Response) => {
     
     res.json({
       id: faculty.id,
+      campusId: faculty.user.campusId,
       employeeCode: faculty.employeeCode,
       name: faculty.user.name,
       email: faculty.user.email,

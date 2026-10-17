@@ -190,7 +190,14 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border-2 border-border bg-popover p-2 shadow-lg">
                   <div className="px-3 py-2 border-b border-border mb-2">
                     <p className="font-medium text-sm truncate">{user?.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                      {user?.campusId && (
+                        <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                          {user.campusId}
+                        </span>
+                      )}
+                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                    </div>
                   </div>
                   
                   <button

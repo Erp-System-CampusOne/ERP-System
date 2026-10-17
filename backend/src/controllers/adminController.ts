@@ -300,6 +300,7 @@ export const getActiveInstitutionHod = async (req: Request, res: Response) => {
         user: {
           select: {
             id: true,
+            campusId: true,
             name: true,
             email: true,
             phone: true,
@@ -317,7 +318,7 @@ export const getActiveInstitutionHod = async (req: Request, res: Response) => {
     const history = await prisma.institutionHodAssignment.findMany({
       orderBy: { appointedAt: 'desc' },
       include: {
-        user: { select: { id: true, name: true, email: true, phone: true } }
+        user: { select: { id: true, campusId: true, name: true, email: true, phone: true } }
       }
     });
 
@@ -341,6 +342,7 @@ export const getActiveInstitutionHod = async (req: Request, res: Response) => {
     const activeHodData = active ? {
       assignmentId: active.id,
       userId: active.userId,
+      campusId: active.user.campusId,
       name: active.user.name,
       email: active.user.email,
       phone: active.user.phone,
@@ -554,6 +556,7 @@ export const getExaminers = async (req: Request, res: Response) => {
       },
       select: {
         id: true,
+        campusId: true,
         name: true,
         email: true,
         phone: true,

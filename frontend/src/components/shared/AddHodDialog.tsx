@@ -119,7 +119,7 @@ export function AddHodDialog({
 
   const handleCopy = () => {
     if (createdCredentials) {
-      navigator.clipboard.writeText(`ID: ${createdCredentials.id}\nPassword: ${createdCredentials.password}`);
+      navigator.clipboard.writeText(`CampusOne ID: ${createdCredentials.id}\nPassword: ${createdCredentials.password}\nEmail: ${email}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -204,12 +204,12 @@ export function AddHodDialog({
                 <p className="text-sm font-semibold">Institution Head of Department (All Divisions)</p>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Login Identifier / Email</Label>
-                <p className="font-mono text-sm font-semibold">{email}</p>
+                <Label className="text-xs text-muted-foreground">CampusOne ID (Login ID)</Label>
+                <p className="font-mono text-sm font-bold text-primary">{createdCredentials.id}</p>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Employee ID</Label>
-                <p className="font-mono text-sm font-semibold">{createdCredentials.id}</p>
+                <Label className="text-xs text-muted-foreground">Contact Email</Label>
+                <p className="font-mono text-sm font-medium">{email}</p>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Temporary Password</Label>

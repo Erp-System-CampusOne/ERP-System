@@ -103,7 +103,7 @@ export function AssignExaminerDialog({
 
   const handleCopy = () => {
     if (createdCredentials) {
-      navigator.clipboard.writeText(`ID: ${createdCredentials.id}\nPassword: ${createdCredentials.password}`);
+      navigator.clipboard.writeText(`CampusOne ID: ${createdCredentials.id}\nPassword: ${createdCredentials.password}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -269,8 +269,8 @@ export function AssignExaminerDialog({
 
               <div className="space-y-3 bg-muted/50 p-4 rounded-xl border border-border">
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Login ID / Code</Label>
-                  <p className="font-mono text-sm font-medium">{createdCredentials.id}</p>
+                  <Label className="text-xs text-muted-foreground">CampusOne ID (Login ID)</Label>
+                  <p className="font-mono text-sm font-bold text-primary">{createdCredentials.id}</p>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Default Password</Label>

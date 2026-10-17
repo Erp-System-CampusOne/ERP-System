@@ -92,8 +92,13 @@ export default function Faculty() {
                   <h1 className="font-display text-3xl font-bold tracking-tight">
                     Faculty Dashboard
                   </h1>
-                  <p className="mt-1 text-muted-foreground">
-                    {profile?.designation} • {profile?.department}
+                  <p className="mt-1 text-muted-foreground flex items-center gap-2 flex-wrap">
+                    {profile?.campusId && (
+                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                        {profile.campusId}
+                      </span>
+                    )}
+                    <span>{profile?.designation} • {profile?.department} • Emp Code: {profile?.employeeCode}</span>
                   </p>
                 </div>
                 <div className="flex items-center gap-3">

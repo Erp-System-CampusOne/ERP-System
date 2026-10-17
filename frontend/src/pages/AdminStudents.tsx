@@ -63,7 +63,7 @@ export default function AdminStudents() {
   });
   const [showEditModal, setShowEditModal] = useState(false);
   const [editStudentId, setEditStudentId] = useState<string | null>(null);
-  const [createdCredentials, setCreatedCredentials] = useState<{ name: string; rollNumber: string; email: string; password: string } | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{ name: string; campusId?: string; rollNumber: string; email: string; password: string } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
   const studentMutations = useStudentMutations();
@@ -112,6 +112,7 @@ export default function AdminStudents() {
       setShowAddModal(false);
       setCreatedCredentials({
         name: result.name ?? studentForm.name,
+        campusId: result.campusId,
         rollNumber: result.rollNumber,
         email: result.email ?? studentForm.email,
         password: 'student123',
@@ -302,7 +303,14 @@ export default function AdminStudents() {
                           </td>
                           <td className="py-3 px-2">
                             <div>
-                              <p className="font-medium">{student.name}</p>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="font-medium">{student.name}</p>
+                                {student.campusId && (
+                                  <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                                    {student.campusId}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-xs text-muted-foreground">{student.email}</p>
                             </div>
                           </td>
@@ -533,8 +541,9 @@ export default function AdminStudents() {
             <div className="p-4 space-y-3">
               <p className="text-sm text-muted-foreground">Share these login credentials with <span className="font-semibold text-foreground">{createdCredentials.name}</span>.</p>
               {[
-                { label: 'Roll Number (Login ID)', value: createdCredentials.rollNumber, key: 'roll' },
-                { label: 'Email', value: createdCredentials.email, key: 'email' },
+                { label: 'CampusOne ID (Login ID)', value: createdCredentials.campusId || createdCredentials.rollNumber, key: 'coid' },
+                { label: 'Roll Number', value: createdCredentials.rollNumber, key: 'roll' },
+                { label: 'Contact Email', value: createdCredentials.email, key: 'email' },
                 { label: 'Default Password', value: createdCredentials.password, key: 'pass' },
               ].map(({ label, value, key }) => (
                 <div key={key} className="space-y-1">

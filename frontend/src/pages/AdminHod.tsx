@@ -254,7 +254,11 @@ export default function AdminHod() {
             </CardHeader>
 
             <CardContent className="pt-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-2xl bg-muted/40 border border-border">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 p-4 rounded-2xl bg-muted/40 border border-border">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">CampusOne ID</p>
+                  <p className="font-mono font-bold text-sm text-primary">{activeHod.campusId || 'COID1002'}</p>
+                </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Employee Code</p>
                   <p className="font-mono font-bold text-sm text-foreground">{activeHod.employeeCode}</p>
@@ -285,7 +289,7 @@ export default function AdminHod() {
               <div className="mt-4 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-700 dark:text-purple-300 flex items-start gap-2.5">
                 <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-purple-600" />
                 <span>
-                  <strong>Full Institution Scope:</strong> Dr. Sarah Jenkins is the sole academic head governing all 3 departments. She holds authority over course offerings, timetable generation, faculty allocation, document verification, and examination marks approval across the entire institution.
+                  <strong>Full Institution Scope:</strong> {activeHod.name} is the sole academic head governing all {departments.length} departments. They hold authority over course offerings, timetable generation, faculty allocation, document verification, and examination marks approval across the entire institution.
                 </span>
               </div>
             </CardContent>
@@ -389,6 +393,7 @@ export default function AdminHod() {
                   <thead className="bg-muted/50 border-b border-border text-xs uppercase text-muted-foreground font-semibold">
                     <tr>
                       <th className="px-4 py-3">Appointee</th>
+                      <th className="px-4 py-3">CampusOne ID</th>
                       <th className="px-4 py-3">Email</th>
                       <th className="px-4 py-3">Appointed Date</th>
                       <th className="px-4 py-3">Relieved Date</th>
@@ -400,6 +405,9 @@ export default function AdminHod() {
                       <tr key={record.id} className="hover:bg-muted/20">
                         <td className="px-4 py-3 font-semibold text-foreground">
                           {record.user?.name || 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs font-bold text-primary">
+                          {record.user?.campusId || '—'}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {record.user?.email || 'N/A'}

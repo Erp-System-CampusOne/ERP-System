@@ -127,8 +127,13 @@ export default function Student() {
                   <h1 className="font-display text-3xl font-bold tracking-tight">
                     Welcome back, {profile?.name?.split(' ')[0] || 'Student'}! 👋
                   </h1>
-                  <p className="mt-1 text-muted-foreground">
-                    {profile?.department} • Semester {profile?.semester} • Section {profile?.section}
+                  <p className="mt-1 text-muted-foreground flex items-center gap-2 flex-wrap">
+                    {profile?.campusId && (
+                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                        {profile.campusId}
+                      </span>
+                    )}
+                    <span>{profile?.department} • Semester {profile?.semester} • Section {profile?.section} • Roll No: {profile?.rollNumber}</span>
                   </p>
                 </div>
                 <div className="flex items-center gap-3">

@@ -37,6 +37,7 @@ export function AddStudentDialog({
 
   const [createdCredentials, setCreatedCredentials] = useState<{
     name: string;
+    campusId?: string;
     rollNumber: string;
     email: string;
     password: string;
@@ -74,6 +75,7 @@ export function AddStudentDialog({
       const result = await studentMutations.create.mutateAsync(payload);
       setCreatedCredentials({
         name: result.name ?? form.name,
+        campusId: (result as any).campusId,
         rollNumber: result.rollNumber,
         email: result.email ?? form.email,
         password: 'student123',
@@ -86,7 +88,8 @@ export function AddStudentDialog({
 
   const handleCopy = () => {
     if (createdCredentials) {
-      const text = `Student: ${createdCredentials.name}\nRoll Number: ${createdCredentials.rollNumber}\nEmail: ${createdCredentials.email}\nTemporary Password: ${createdCredentials.password}`;
+      const loginId = createdCredentials.campusId || createdCredentials.rollNumber;
+      const text = `Student: ${createdCredentials.name}\nCampusOne ID (Login ID): ${loginId}\nRoll Number: ${createdCredentials.rollNumber}\nContact Email: ${createdCredentials.email}\nTemporary Password: ${createdCredentials.password}`;
       navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -118,8 +121,9 @@ export function AddStudentDialog({
               </div>
               <div className="text-sm space-y-1 font-mono pt-2 text-foreground">
                 <p><span className="text-muted-foreground font-sans">Name:</span> {createdCredentials.name}</p>
+                <p><span className="text-muted-foreground font-sans">CampusOne ID (Login ID):</span> <strong className="text-primary">{createdCredentials.campusId || createdCredentials.rollNumber}</strong></p>
                 <p><span className="text-muted-foreground font-sans">Roll Number:</span> {createdCredentials.rollNumber}</p>
-                <p><span className="text-muted-foreground font-sans">Login ID:</span> {createdCredentials.email}</p>
+                <p><span className="text-muted-foreground font-sans">Contact Email:</span> {createdCredentials.email}</p>
                 <p><span className="text-muted-foreground font-sans">Default Password:</span> {createdCredentials.password}</p>
               </div>
             </div>
