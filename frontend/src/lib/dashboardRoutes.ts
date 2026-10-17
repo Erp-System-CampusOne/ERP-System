@@ -1,7 +1,7 @@
 const ROLE_DASHBOARD_PATHS: Record<string, string> = {
   student: '/student',
   faculty: '/faculty',
-  hod: '/faculty',
+  hod: '/hod',
   admin: '/admin',
   finance_officer: '/finance',
   librarian: '/library',

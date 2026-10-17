@@ -44,6 +44,7 @@ const FacultyGrading = lazy(() => import('../pages/FacultyGrading'));
 const FacultyLeaves = lazy(() => import('../pages/FacultyLeaves'));
 const FacultyTimetable = lazy(() => import('../pages/FacultyTimetable'));
 const FacultyDepartment = lazy(() => import('../pages/FacultyDepartment'));
+const HodDashboard = lazy(() => import('../pages/HodDashboard'));
 const Admin = lazy(() => import('../pages/Admin'));
 const AdminStudents = lazy(() => import('../pages/AdminStudents'));
 const AdminAdmissions = lazy(() => import('../pages/AdminAdmissions'));
@@ -259,10 +260,14 @@ export const router = createBrowserRouter([
   },
   {
     path: '/faculty/department',
+    element: <Navigate to="/hod" replace />,
+  },
+  {
+    path: '/hod',
     element: (
       <ProtectedRoute>
-        <RouteBoundary routeId="faculty-department">
-          <FacultyDepartment />
+        <RouteBoundary routeId="hod">
+          <HodDashboard />
         </RouteBoundary>
       </ProtectedRoute>
     ),

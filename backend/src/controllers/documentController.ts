@@ -88,10 +88,32 @@ export const getMyDocumentRequests = async (req: Request, res: Response) => {
 
 export const getDocumentQueue = async (req: Request, res: Response) => {
   try {
-    const { status } = req.query;
+    const authReq = req as AuthRequest;
+    const callerRole = authReq.user?.role;
+    const callerId = authReq.user?.id;
+    const { status, departmentId } = req.query;
+
     const whereClause: any = {};
     if (status && Object.values(DocumentStatus).includes(status as DocumentStatus)) {
       whereClause.status = status as DocumentStatus;
+    }
+
+    // Department isolation for HOD
+    if (callerRole === 'hod' && callerId) {
+      // Find department where this user is HOD or faculty
+      const hodDept = await prisma.department.findFirst({
+        where: {
+          OR: [
+            { headOfDepartment: { userId: callerId } },
+            { faculty: { some: { userId: callerId } } }
+          ]
+        }
+      });
+      if (hodDept) {
+        whereClause.student = { departmentId: hodDept.id };
+      }
+    } else if (departmentId) {
+      whereClause.student = { departmentId: String(departmentId) };
     }
 
     const documents = await prisma.documentRequest.findMany({
@@ -122,6 +144,7 @@ export const approveDocumentRequest = async (req: Request, res: Response) => {
     const authReq = req as AuthRequest;
     const reviewerId = authReq.user?.id;
     const { id } = req.params;
+    const { documentUrl } = req.body;
 
     const existing = await prisma.documentRequest.findUnique({ where: { id } });
     if (!existing) {
@@ -134,12 +157,14 @@ export const approveDocumentRequest = async (req: Request, res: Response) => {
         status: DocumentStatus.completed,
         reviewerId,
         reviewedAt: new Date(),
-        rejectionReason: null
+        rejectionReason: null,
+        documentUrl: documentUrl ? String(documentUrl).trim() : null
       },
       include: {
         student: {
           include: {
-            user: { select: { id: true, name: true, email: true } }
+            user: { select: { id: true, name: true, email: true } },
+            department: { select: { id: true, name: true, code: true } }
           }
         },
         reviewer: { select: { id: true, name: true, role: true } }

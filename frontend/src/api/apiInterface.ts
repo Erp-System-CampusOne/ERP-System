@@ -161,10 +161,12 @@ export interface Course {
   code: string;
   name: string;
   department: string;
+  departmentId?: string;
   semester: number;
   credits: number;
   type?: 'theory' | 'lab' | 'elective' | 'project';
   description?: string;
+  facultyId?: string;
   facultyInstructor?: string;
   students?: number;
   faculty?: string;
@@ -173,10 +175,13 @@ export interface Course {
 export interface CourseInput {
   code: string;
   name: string;
-  department: string;
+  department?: string;
+  departmentId?: string;
   semester: number;
   credits: number;
   type?: 'theory' | 'lab' | 'elective' | 'project';
+  facultyId?: string;
+  description?: string;
 }
 
 export interface Department {
@@ -513,6 +518,10 @@ export interface DocumentRequestResponse {
   studentId: string;
   documentName: string;
   status: string;
+  documentUrl?: string;
+  purpose?: string;
+  rejectionReason?: string;
+  reviewer?: { id: string; name: string; role: string };
   requestedAt: string;
   updatedAt: string;
 }

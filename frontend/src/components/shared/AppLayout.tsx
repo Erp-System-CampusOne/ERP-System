@@ -4,7 +4,7 @@ import {
   BookOpen, Users, Shield, Library, BarChart3, 
   GraduationCap, Home, Calendar, BookMarked, FileText, 
   DollarSign, ClipboardList, Settings, LogOut, Menu, X,
-  Bell, Moon, Sun, ChevronDown
+  Bell, Moon, Sun, ChevronDown, FileCheck
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -31,7 +31,15 @@ const FACULTY_NAV = [
   { href: '/faculty/grading', label: 'Grading', icon: BookMarked },
   { href: '/faculty/leaves', label: 'Leaves', icon: Calendar },
   { href: '/faculty/timetable', label: 'Timetable', icon: Calendar },
-  { href: '/faculty/department', label: 'Department', icon: Shield },
+];
+
+const HOD_NAV = [
+  { href: '/hod', label: 'Command Center', icon: Home },
+  { href: '/hod?tab=students', label: 'Students', icon: GraduationCap },
+  { href: '/hod?tab=faculty', label: 'Faculty & Workload', icon: Users },
+  { href: '/hod?tab=courses', label: 'Course Allocation', icon: BookOpen },
+  { href: '/hod?tab=timetable', label: 'Timetable Builder', icon: Calendar },
+  { href: '/hod?tab=documents', label: 'Document Requests', icon: FileCheck },
 ];
 
 const ADMIN_NAV = [
@@ -74,7 +82,7 @@ const ROLE_CONFIG: Record<string, { nav: typeof STUDENT_NAV; title: string; colo
   student: { nav: STUDENT_NAV, title: 'Student Portal', color: 'bg-success' },
   faculty: { nav: FACULTY_NAV, title: 'Faculty Portal', color: 'bg-info' },
   admin: { nav: ADMIN_NAV, title: 'Admin Console', color: 'bg-primary' },
-  hod: { nav: FACULTY_NAV, title: 'HOD Dashboard', color: 'bg-primary' },
+  hod: { nav: HOD_NAV, title: 'HOD Command Center', color: 'bg-primary' },
   finance_officer: { nav: FINANCE_NAV, title: 'Finance Office', color: 'bg-warning' },
   librarian: { nav: LIBRARY_NAV, title: 'Library System', color: 'bg-destructive' },
   management: { nav: ANALYTICS_NAV, title: 'Analytics', color: 'bg-info' },
@@ -131,8 +139,8 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           <nav className="hidden md:flex items-center justify-center gap-0.5 flex-1 overflow-hidden">
             {navItems.map((item) => {
-              const isActive = location.pathname === item.href || 
-                (item.href !== '/admin' && item.href !== '/student' && item.href !== '/faculty' && item.href !== '/finance' && item.href !== '/library' && item.href !== '/analytics' && location.pathname.startsWith(item.href));
+              const isActive = (item.href.includes('?') ? (location.pathname + location.search) === item.href : location.pathname === item.href) || 
+                (item.href !== '/admin' && item.href !== '/student' && item.href !== '/faculty' && item.href !== '/hod' && item.href !== '/finance' && item.href !== '/library' && item.href !== '/analytics' && !item.href.includes('?') && location.pathname.startsWith(item.href));
               return (
                 <Link
                   key={item.href}

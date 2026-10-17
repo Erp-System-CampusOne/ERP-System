@@ -208,7 +208,7 @@ export const createAdminUser = async (req: Request, res: Response) => {
         });
       }
 
-      // If HOD, create institution_hod_assignments record
+      // If HOD, create institution_hod_assignments record & link department/faculty
       if (role === 'hod') {
         const inst = await tx.institution.findFirst();
         if (inst) {
@@ -219,6 +219,25 @@ export const createAdminUser = async (req: Request, res: Response) => {
               isActive: true,
               appointedAt: new Date()
             }
+          });
+        }
+        const dept = departmentId 
+          ? await tx.department.findUnique({ where: { id: departmentId } })
+          : (department ? await tx.department.findFirst({ where: { name: department } }) : await tx.department.findFirst());
+        if (dept) {
+          const empCode = req.body.employeeCode || `HOD${Date.now().toString().slice(-6)}`;
+          const hodFac = await tx.faculty.create({
+            data: {
+              userId: u.id,
+              departmentId: dept.id,
+              employeeCode: empCode,
+              designation: designation || 'Head of Department',
+              qualification: req.body.qualification || 'Ph.D.'
+            }
+          });
+          await tx.department.update({
+            where: { id: dept.id },
+            data: { headOfDepartmentId: hodFac.id }
           });
         }
       }

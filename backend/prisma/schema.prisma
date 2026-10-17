@@ -581,6 +581,7 @@ model DocumentRequest {
   studentId    String
   documentName   String
   purpose        String?
+  documentUrl    String?
   reviewerId     String?
   reviewedAt     DateTime?
   rejectionReason String?

@@ -11,9 +11,10 @@ interface AddStaffDialogProps {
   role: string;
   roleLabel: string;
   className?: string;
+  defaultDepartmentId?: string;
 }
 
-export function AddStaffDialog({ role, roleLabel, className }: AddStaffDialogProps) {
+export function AddStaffDialog({ role, roleLabel, className, defaultDepartmentId }: AddStaffDialogProps) {
   const { user } = useAuth();
   const createAdminUser = useCreateAdminUser();
   const [isOpen, setIsOpen] = useState(false);
@@ -25,15 +26,21 @@ export function AddStaffDialog({ role, roleLabel, className }: AddStaffDialogPro
   const [createdCredentials, setCreatedCredentials] = useState<{id: string, password: string} | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Only render if the current user is an admin
-  if (user?.role !== 'admin') {
+  // Render for admin or hod
+  if (user?.role !== 'admin' && user?.role !== 'hod') {
     return null;
   }
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await createAdminUser.mutateAsync({ name, email, phone, role });
+      const res = await createAdminUser.mutateAsync({
+        name,
+        email,
+        phone,
+        role,
+        ...(defaultDepartmentId ? { departmentId: defaultDepartmentId } : {})
+      });
       if (res.success && res.credentials) {
         setCreatedCredentials(res.credentials);
       }

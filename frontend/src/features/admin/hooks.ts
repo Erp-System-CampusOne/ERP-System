@@ -18,7 +18,9 @@ import {
   createCourse, updateCourse, deleteCourse,
   updateRolePermissions,
   updateAdmissionStatus, saveTimetable,
-  createAdminUser
+  createAdminUser,
+  getDocumentQueue, approveDocumentRequest, rejectDocumentRequest,
+  getExaminers, assignExaminer
 } from '@/api/apiCall';
 import type { DepartmentInput } from '@/api/apiInterface';
 
@@ -261,3 +263,48 @@ export function useCreateAdminUser() {
     mutationFn: createAdminUser,
   });
 }
+
+export function useDocumentQueue(status?: string) {
+  return useQuery({
+    queryKey: ['admin', 'documentQueue', status],
+    queryFn: async () => {
+      const res = await getDocumentQueue(status);
+      return res.documents || [];
+    },
+  });
+}
+
+export function useDocumentMutations() {
+  const queryClient = useQueryClient();
+  return {
+    approve: useMutation({
+      mutationFn: ({ id, documentUrl }: { id: string; documentUrl?: string }) => approveDocumentRequest(id, { documentUrl }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'documentQueue'] }),
+    }),
+    reject: useMutation({
+      mutationFn: ({ id, rejectionReason }: { id: string; rejectionReason: string }) => rejectDocumentRequest(id, { rejectionReason }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'documentQueue'] }),
+    }),
+  };
+}
+
+export function useExaminers() {
+  return useQuery({
+    queryKey: ['admin', 'examiners'],
+    queryFn: async () => {
+      const res = await getExaminers();
+      return res.examiners || [];
+    },
+  });
+}
+
+export function useAssignExaminerMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: assignExaminer,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'examiners'] });
+    },
+  });
+}
+

@@ -6,10 +6,10 @@ import { authorizeRoles } from '../middlewares/roleMiddleware';
 const router = Router();
 router.use(authenticateJWT);
 
-router.get('/', authorizeRoles('admin', 'faculty', 'student'), getCourses);
-router.post('/', authorizeRoles('admin'), createCourse);
-router.get('/:id', authorizeRoles('admin', 'faculty', 'student'), getCourseById);
-router.put('/:id', authorizeRoles('admin'), updateCourse);
-router.delete('/:id', authorizeRoles('admin'), deleteCourse);
+router.get('/', authorizeRoles('admin', 'hod', 'faculty', 'student'), getCourses);
+router.post('/', authorizeRoles('admin', 'hod'), createCourse);
+router.get('/:id', authorizeRoles('admin', 'hod', 'faculty', 'student'), getCourseById);
+router.put('/:id', authorizeRoles('admin', 'hod'), updateCourse);
+router.delete('/:id', authorizeRoles('admin', 'hod'), deleteCourse);
 
 export default router;

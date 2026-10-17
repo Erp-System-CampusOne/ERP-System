@@ -151,9 +151,26 @@ function DocumentCard({ doc, onRequest, isPending }: { doc: DocumentRequest; onR
   );
 }
 
-function RequestHistoryItem({ request }: { request: { id: string; documentName: string; status: 'completed' | 'pending' | 'processing'; requestedDate: string } }) {
+function RequestHistoryItem({ request }: { request: { id: string; documentName: string; status: 'completed' | 'pending' | 'processing'; requestedDate: string; documentUrl?: string; reviewerName?: string } }) {
   const isCompleted = request.status === 'completed';
   const isProcessing = request.status === 'processing';
+
+  const handleDownload = () => {
+    if (request.documentUrl) {
+      window.open(request.documentUrl, '_blank');
+    } else {
+      // Fallback: download a placeholder certificate text file
+      const blob = new Blob([
+        `OFFICIAL CERTIFICATE: ${request.documentName}\nStatus: Completed\nApproved by: ${request.reviewerName || 'Head of Department'}\nIssue Date: ${request.requestedDate}`
+      ], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${request.documentName.toLowerCase().replace(/\s+/g, '_')}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
 
   return (
     <motion.div variants={item} className="flex items-center justify-between p-4 rounded-xl border-2 border-border/60 bg-card">
@@ -174,6 +191,7 @@ function RequestHistoryItem({ request }: { request: { id: string; documentName: 
           <p className="font-semibold text-foreground">{request.documentName}</p>
           <p className="text-sm text-muted-foreground">
             Requested on {request.requestedDate}
+            {request.reviewerName && ` • Approved by ${request.reviewerName}`}
           </p>
         </div>
       </div>
@@ -187,7 +205,7 @@ function RequestHistoryItem({ request }: { request: { id: string; documentName: 
           {isCompleted ? 'Completed' : isProcessing ? 'Processing' : 'Pending'}
         </span>
         {isCompleted && (
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleDownload}>
             <Download className="w-4 h-4 mr-1" />
             Download
           </Button>
@@ -210,6 +228,8 @@ export default function StudentDocuments() {
     documentName: doc.documentName,
     status: doc.status as 'completed' | 'pending' | 'processing',
     requestedDate: new Date(doc.requestedAt).toLocaleDateString(),
+    documentUrl: doc.documentUrl,
+    reviewerName: doc.reviewer?.name,
   }));
 
   return (

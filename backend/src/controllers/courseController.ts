@@ -33,10 +33,12 @@ export const getCourses = async (req: Request, res: Response) => {
       code: c.code,
       name: c.name,
       department: c.department.name,
+      departmentId: c.departmentId,
       semester: c.semester,
       credits: c.credits,
       type: c.type,
       description: c.description,
+      facultyId: c.facultyId,
       facultyInstructor: c.faculty?.user.name
     }));
 
@@ -48,22 +50,71 @@ export const getCourses = async (req: Request, res: Response) => {
 
 export const createCourse = async (req: Request, res: Response) => {
   try {
-    const { code, name, department, semester, credits, type, description } = req.body;
+    const { code, name, department, departmentId, semester, credits, type, description, facultyId } = req.body;
     
+    let resolvedDeptId = departmentId || department;
+    if (resolvedDeptId) {
+      const dept = await prisma.department.findFirst({
+        where: {
+          OR: [
+            { id: resolvedDeptId },
+            { name: { equals: resolvedDeptId, mode: 'insensitive' } },
+            { code: { equals: resolvedDeptId, mode: 'insensitive' } }
+          ]
+        }
+      });
+      if (dept) resolvedDeptId = dept.id;
+    }
+
+    if (!resolvedDeptId) {
+      const authUser = (req as any).user;
+      if (authUser?.id) {
+        const hodDept = await prisma.department.findFirst({
+          where: {
+            OR: [
+              { headOfDepartment: { userId: authUser.id } },
+              { faculty: { some: { userId: authUser.id } } }
+            ]
+          }
+        });
+        if (hodDept) resolvedDeptId = hodDept.id;
+      }
+    }
+
+    if (!resolvedDeptId) {
+      const firstDept = await prisma.department.findFirst();
+      resolvedDeptId = firstDept?.id;
+    }
+
     const course = await prisma.course.create({
       data: {
         code,
         name,
-        departmentId: department, // assuming 'department' is an ID
-        semester,
-        credits,
-        type,
-        description
-      }
+        departmentId: resolvedDeptId,
+        semester: Number(semester) || 1,
+        credits: Number(credits) || 3,
+        type: type === 'lab' ? 'lab' : 'theory',
+        description,
+        facultyId: facultyId || null
+      },
+      include: { department: true, faculty: { include: { user: true } } }
     });
     
-    res.json(course);
+    res.status(201).json({
+      id: course.id,
+      code: course.code,
+      name: course.name,
+      department: course.department.name,
+      departmentId: course.departmentId,
+      semester: course.semester,
+      credits: course.credits,
+      type: course.type,
+      description: course.description,
+      facultyId: course.facultyId,
+      facultyInstructor: course.faculty?.user.name
+    });
   } catch (error) {
+    console.error('Failed to create course:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -81,10 +132,12 @@ export const getCourseById = async (req: Request, res: Response) => {
       code: course.code,
       name: course.name,
       department: course.department.name,
+      departmentId: course.departmentId,
       semester: course.semester,
       credits: course.credits,
       type: course.type,
       description: course.description,
+      facultyId: course.facultyId,
       facultyInstructor: course.faculty?.user.name
     });
   } catch (error) {
@@ -94,13 +147,35 @@ export const getCourseById = async (req: Request, res: Response) => {
 
 export const updateCourse = async (req: Request, res: Response) => {
   try {
-    const { name, credits, type, description } = req.body;
+    const { name, credits, type, description, facultyId, departmentId, semester } = req.body;
     const course = await prisma.course.update({
       where: { id: req.params.id },
-      data: { name, credits, type, description }
+      data: {
+        ...(name && { name }),
+        ...(credits !== undefined && { credits: Number(credits) }),
+        ...(type && { type: type === 'lab' ? 'lab' : 'theory' }),
+        ...(description !== undefined && { description }),
+        ...(facultyId !== undefined && { facultyId: facultyId || null }),
+        ...(departmentId && { departmentId }),
+        ...(semester !== undefined && { semester: Number(semester) })
+      },
+      include: { department: true, faculty: { include: { user: true } } }
     });
-    res.json(course);
+    res.json({
+      id: course.id,
+      code: course.code,
+      name: course.name,
+      department: course.department.name,
+      departmentId: course.departmentId,
+      semester: course.semester,
+      credits: course.credits,
+      type: course.type,
+      description: course.description,
+      facultyId: course.facultyId,
+      facultyInstructor: course.faculty?.user.name
+    });
   } catch (error) {
+    console.error('Failed to update course:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };

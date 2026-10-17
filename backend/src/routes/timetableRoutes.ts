@@ -7,7 +7,7 @@ const router = Router();
 
 router.use(authenticateJWT);
 
-router.get('/', authorizeRoles('admin', 'faculty', 'student'), getTimetables);
+router.get('/', authorizeRoles('admin', 'hod', 'faculty', 'student'), getTimetables);
 router.get('/export', authorizeRoles('admin', 'hod', 'faculty'), exportTimetable);
 router.post('/generate', authorizeRoles('admin', 'hod'), generateTimetable);
 router.post('/save', authorizeRoles('admin', 'hod'), saveTimetable);

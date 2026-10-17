@@ -41,5 +41,15 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to={getDashboardPath(role)} replace />;
   }
 
+  const isHodRoute = location.pathname === '/hod' || location.pathname.startsWith('/hod');
+  if (isHodRoute && role !== 'hod' && role !== 'admin') {
+    return <Navigate to={getDashboardPath(role)} replace />;
+  }
+
+  const isFacultyRoute = location.pathname === '/faculty' || location.pathname.startsWith('/faculty/');
+  if (isFacultyRoute && role === 'hod') {
+    return <Navigate to="/hod" replace />;
+  }
+
   return <AppLayout>{children}</AppLayout>;
 }
