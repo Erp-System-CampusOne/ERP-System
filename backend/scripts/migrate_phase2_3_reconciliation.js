@@ -11,7 +11,7 @@
  *   8. Add workflow fields to DocumentRequest and ExamResult
  */
 
-const { Client } = require('c:/Projects/ERP-System/node_modules/pg');
+const { Client } = require('pg');
 
 const DISPOSABLE_DB_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5433/postgres';
 

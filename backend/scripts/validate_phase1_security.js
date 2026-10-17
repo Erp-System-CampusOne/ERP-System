@@ -19,10 +19,10 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const express = require('express');
-const { Client } = require('c:/Projects/ERP-System/node_modules/pg');
+const { Client } = require('pg');
 
-const DISPOSABLE_DB_URL = 'postgresql://postgres:postgres@127.0.0.1:5433/postgres';
-const TEST_JWT_SECRET = 'mZp12XICGsmUbvvn7Kf9OcmSv2uq572AeuL2OSpfsrUXiDbBBJXSZTX7ppfOc37u';
+const DISPOSABLE_DB_URL = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5433/postgres';
+const TEST_JWT_SECRET = process.env.JWT_SECRET || 'mZp12XICGsmUbvvn7Kf9OcmSv2uq572AeuL2OSpfsrUXiDbBBJXSZTX7ppfOc37u';
 
 process.env.DATABASE_URL = DISPOSABLE_DB_URL;
 process.env.TEST_DATABASE_URL = DISPOSABLE_DB_URL;
