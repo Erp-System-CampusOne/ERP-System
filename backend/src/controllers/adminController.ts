@@ -353,7 +353,16 @@ export const getActiveInstitutionHod = async (req: Request, res: Response) => {
       homeDepartment: active.user.facultyProfile?.department?.name || 'All Divisions',
       appointedAt: active.appointedAt,
       institution: active.institution,
-      status: 'active'
+      status: 'active',
+      user: {
+        id: active.user.id,
+        campusId: active.user.campusId,
+        name: active.user.name,
+        email: active.user.email,
+        phone: active.user.phone,
+        avatarUrl: active.user.avatarUrl,
+        facultyProfile: active.user.facultyProfile
+      }
     } : null;
 
     res.json({

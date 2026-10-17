@@ -346,7 +346,8 @@ async function main() {
     // T10: Admin queries GET /api/admin/hod/active -> returns Charles
     const activeHodQuery = await request('GET', '/api/admin/hod/active', null, adminAuth.authHeader);
     assert(activeHodQuery.status === 200, 'T10-A: GET /api/admin/hod/active returned HTTP 200');
-    assert(activeHodQuery.body.activeHod.user.id === hodCharlesId, 'T10-B: Active HOD correctly identified as Charles');
+    const activeUserId = activeHodQuery.body.activeHod?.user?.id || activeHodQuery.body.activeHod?.userId;
+    assert(activeUserId === hodCharlesId, 'T10-B: Active HOD correctly identified as Charles');
 
     // Create an Examination & Course for test
     const courseCS101 = await prisma.course.upsert({
@@ -673,7 +674,8 @@ async function main() {
     assert(appointDanaRes.status === 201, 'T42-A: Admin appoints new HOD Prof. Dana (HTTP 201)');
 
     const checkActiveDana = await request('GET', '/api/admin/hod/active', null, adminAuth.authHeader);
-    assert(checkActiveDana.body.activeHod.user.name === 'Prof. Dana New HOD', 'T42-B: New single active HOD verified as Prof. Dana');
+    const activeUserName = checkActiveDana.body.activeHod?.user?.name || checkActiveDana.body.activeHod?.name;
+    assert(activeUserName === 'Prof. Dana New HOD', 'T42-B: New single active HOD verified as Prof. Dana');
 
     // --------------------------------------------------------------------------
     // [Suite 6] Synthetic Fixtures Cleanup
