@@ -16,9 +16,6 @@ import { authorizeRoles } from '../middlewares/roleMiddleware';
 const router = Router();
 router.use(authenticateJWT);
 
-// Admissions: Analytics can view, but only Admin can approve/reject
-router.get('/admissions', authorizeRoles('admin', 'analytics', 'management'), getAdmissions);
-router.put('/admissions/:id', authorizeRoles('admin'), updateAdmissionStatus);
 
 // Role permissions: Analytics can view, but only Admin can update RBAC permissions
 router.get('/roles', authorizeRoles('admin', 'analytics', 'management'), getRolePermissions);

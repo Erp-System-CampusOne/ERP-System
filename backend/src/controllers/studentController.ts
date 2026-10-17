@@ -117,6 +117,26 @@ export const createStudent = async (req: AuthRequest, res: Response) => {
 
     // Generate roll number
     const rollNumber = `STU${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`;
+    let resolvedDeptId = department;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(department || '');
+    if (!isUuid) {
+      const dept = department 
+        ? await prisma.department.findFirst({ where: { name: department } })
+        : await prisma.department.findFirst();
+      if (dept) {
+        resolvedDeptId = dept.id;
+      }
+    }
+    if (!resolvedDeptId && req.user?.id) {
+      const callerFaculty = await prisma.faculty.findFirst({
+        where: { userId: req.user.id },
+        select: { departmentId: true }
+      });
+      if (callerFaculty?.departmentId) {
+        resolvedDeptId = callerFaculty.departmentId;
+      }
+    }
+
     const defaultPassword = await bcrypt.hash('student123', 10);
 
     const student = await prisma.$transaction(async (tx) => {
@@ -130,7 +150,7 @@ export const createStudent = async (req: AuthRequest, res: Response) => {
           studentProfile: {
             create: {
               rollNumber,
-              departmentId: department,
+              departmentId: resolvedDeptId,
               degree,
               feeQuota,
               semester: semester || 1,

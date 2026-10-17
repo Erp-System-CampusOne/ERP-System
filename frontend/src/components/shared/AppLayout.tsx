@@ -37,7 +37,6 @@ const FACULTY_NAV = [
 const ADMIN_NAV = [
   { href: '/admin', label: 'Dashboard', icon: Home },
   { href: '/admin/students', label: 'Students', icon: GraduationCap },
-  { href: '/admin/admissions', label: 'Admissions', icon: Users },
   { href: '/admin/faculty', label: 'Faculty', icon: Users },
   { href: '/admin/academics', label: 'Academics', icon: BookOpen },
   { href: '/admin/timetable-builder', label: 'Timetable', icon: Calendar },
@@ -66,7 +65,6 @@ const LIBRARY_NAV = [
 
 const ANALYTICS_NAV = [
   { href: '/analytics', label: 'Overview', icon: Home },
-  { href: '/analytics/admissions', label: 'Admissions', icon: Users },
   { href: '/analytics/academic-performance', label: 'Academic', icon: BookOpen },
   { href: '/analytics/placement', label: 'Placement', icon: GraduationCap },
   { href: '/analytics/financial-health', label: 'Financial', icon: DollarSign },

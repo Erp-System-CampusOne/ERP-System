@@ -8,7 +8,7 @@ import {
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useInstitutionalOverview, useAdmissionsAnalytics, useAcademicPerformanceAnalytics, usePlacementAnalytics } from '@/features/analytics/hooks';
+import { useInstitutionalOverview, useAcademicPerformanceAnalytics, usePlacementAnalytics } from '@/features/analytics/hooks';
 import { cn } from '@/lib/utils';
 import { AddStaffDialog } from '@/components/shared/AddStaffDialog';
 
@@ -57,7 +57,6 @@ export default function Analytics() {
   const reduceMotion = useReducedMotion();
   const Wrapper = reduceMotion ? 'div' : motion.div;
   const { data: overview } = useInstitutionalOverview();
-  const { data: admissions } = useAdmissionsAnalytics();
   const { data: academic } = useAcademicPerformanceAnalytics();
   const { data: placementData } = usePlacementAnalytics();
   // The API stores CTC in rupees; this dashboard presents it in lakhs.
@@ -133,38 +132,6 @@ export default function Analytics() {
           <Card className="border-2 border-border/60">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
-                <CardTitle className="text-lg font-display">Admissions Overview</CardTitle>
-                <CardDescription>Application and enrollment metrics</CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/analytics/admissions">Details <ArrowRight className="ml-1 w-4 h-4" /></Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <span className="text-muted-foreground">Total Applications</span>
-                  <span className="font-mono font-bold tabular-nums">{admissions?.totalApplications?.toLocaleString() || 0}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <span className="text-muted-foreground">Admitted</span>
-                  <span className="font-mono font-bold tabular-nums">{admissions?.admittedStudents || 0}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <span className="text-muted-foreground">Acceptance Rate</span>
-                  <span className="font-mono font-bold tabular-nums">{admissions?.acceptanceRate || 0}%</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <span className="text-muted-foreground">Gender Ratio (M:F)</span>
-                  <span className="font-mono font-bold tabular-nums">{admissions?.genderRatio ? `${admissions.genderRatio.male}:${admissions.genderRatio.female}` : 'Not tracked'}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-border/60">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div>
                 <CardTitle className="text-lg font-display">Placement Highlights</CardTitle>
                 <CardDescription>Recruitment statistics</CardDescription>
               </div>
@@ -193,54 +160,41 @@ export default function Analytics() {
               </div>
             </CardContent>
           </Card>
-        </div>
 
-        <Card className="border-2 border-border/60">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <CardTitle className="text-lg font-display">Department Performance</CardTitle>
-              <CardDescription>Pass rates by department</CardDescription>
-            </div>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/analytics/academic-performance">Details <ArrowRight className="ml-1 w-4 h-4" /></Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {academic?.departmentPassRates?.map((dept) => (
-                <div key={dept.department} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">{dept.department}</span>
-                    <span className="font-mono tabular-nums">{dept.passRate}%</span>
+          <Card className="border-2 border-border/60">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle className="text-lg font-display">Department Performance</CardTitle>
+                <CardDescription>Pass rates by department</CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/analytics/academic-performance">Details <ArrowRight className="ml-1 w-4 h-4" /></Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {academic?.departmentPassRates?.map((dept) => (
+                  <div key={dept.department} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{dept.department}</span>
+                      <span className="font-mono tabular-nums">{dept.passRate}%</span>
+                    </div>
+                    <div className="h-2 bg-muted/30 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary rounded-full transition-all duration-500" 
+                        style={{ width: `${dept.passRate}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-2 bg-muted/30 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary rounded-full transition-all duration-500" 
-                      style={{ width: `${dept.passRate}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="space-y-3">
           <h2 className="font-display text-xl font-semibold tracking-tight">Analytics Modules</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Link 
-              to="/analytics/admissions"
-              className="group flex items-center gap-4 p-4 rounded-xl border-2 border-border/60 bg-card hover:border-primary/40 hover:shadow-md transition-all duration-200"
-            >
-              <div className="p-3 rounded-xl bg-emerald-500">
-                <Users className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground">Admissions</p>
-                <p className="text-sm text-muted-foreground">Enrollment funnel</p>
-              </div>
-              <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
-            </Link>
+          <div className="grid gap-4 sm:grid-cols-3">
             <Link 
               to="/analytics/academic-performance"
               className="group flex items-center gap-4 p-4 rounded-xl border-2 border-border/60 bg-card hover:border-primary/40 hover:shadow-md transition-all duration-200"

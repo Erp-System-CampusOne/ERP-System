@@ -12,13 +12,13 @@ const pageNames: Record<string, string> = {
   '/student/library': 'Student library', '/student/documents': 'Student documents', '/faculty': 'Faculty dashboard',
   '/faculty/attendance': 'Faculty attendance', '/faculty/classes': 'Faculty classes', '/faculty/grading': 'Grade entry',
   '/faculty/leaves': 'Leave management', '/faculty/timetable': 'Faculty timetable', '/faculty/department': 'Department management',
-  '/admin': 'Administration dashboard', '/admin/students': 'Student directory', '/admin/admissions': 'Admissions',
+  '/admin': 'Administration dashboard', '/admin/students': 'Student directory',
   '/admin/faculty': 'Faculty directory', '/admin/academics': 'Academics management', '/admin/timetable-builder': 'Timetable builder',
   '/admin/examinations': 'Examinations', '/admin/notices': 'Campus notices', '/admin/roles': 'Access roles',
   '/finance': 'Finance dashboard', '/finance/structures': 'Fee structures', '/finance/dues': 'Fee dues',
   '/finance/transactions': 'Payment ledger', '/finance/reports': 'Financial analytics', '/library': 'Library dashboard',
   '/library/catalog': 'Book catalog', '/library/circulation': 'Circulation desk', '/library/fines': 'Fine management',
-  '/analytics': 'Analytics overview', '/analytics/admissions': 'Admissions analytics', '/analytics/academic-performance': 'Academic performance',
+  '/analytics': 'Analytics overview', '/analytics/academic-performance': 'Academic performance',
   '/analytics/placement': 'Placement analytics', '/analytics/financial-health': 'Financial health',
 };
 

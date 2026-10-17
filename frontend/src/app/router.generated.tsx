@@ -83,11 +83,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/signup',
-    element: (
-      <RouteBoundary routeId="signup">
-        <Signup />
-      </RouteBoundary>
-    ),
+    element: <Navigate to="/login" replace />,
   },
   {
     path: '/forgot-password',
@@ -293,13 +289,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/admin/admissions',
-    element: (
-      <ProtectedRoute>
-        <RouteBoundary routeId="admin-admissions">
-          <AdminAdmissions />
-        </RouteBoundary>
-      </ProtectedRoute>
-    ),
+    element: <Navigate to="/admin/students" replace />,
   },
   {
     path: '/admin/faculty',
@@ -471,13 +461,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/analytics/admissions',
-    element: (
-      <ProtectedRoute>
-        <RouteBoundary routeId="analytics-admissions">
-          <AnalyticsAdmissions />
-        </RouteBoundary>
-      </ProtectedRoute>
-    ),
+    element: <Navigate to="/analytics" replace />,
   },
   {
     path: '/analytics/academic-performance',

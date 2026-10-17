@@ -16,8 +16,6 @@ router.use(authenticateJWT);
 
 // Restricted to analytics, management (legacy alias), admin, and authorized academic roles
 router.get('/overview', authorizeRoles('admin', 'analytics', 'management', 'hod'), getInstitutionalOverview);
-router.get('/admissions', authorizeRoles('admin', 'analytics', 'management'), getAdmissionsAnalytics);
-router.get('/admissions/report', authorizeRoles('admin', 'analytics', 'management'), exportAdmissionsReport);
 router.get('/academic-performance', authorizeRoles('admin', 'analytics', 'management', 'hod'), getAcademicPerformanceAnalytics);
 router.get('/placements', authorizeRoles('admin', 'analytics', 'management'), getPlacementAnalytics);
 router.get('/activity', authorizeRoles('admin', 'analytics', 'management'), getSystemActivity);

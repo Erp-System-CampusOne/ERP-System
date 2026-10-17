@@ -218,11 +218,8 @@ export default function Login() {
             </CardContent>
           </Card>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            New to CampusOne?{' '}
-            <a href="/signup" className="text-primary hover:underline font-semibold">
-              Apply for admission
-            </a>
+          <p className="mt-6 text-center text-xs text-muted-foreground">
+            Student and staff accounts are provisioned directly by your Department HOD or Administrator.
           </p>
         </div>
       </div>
