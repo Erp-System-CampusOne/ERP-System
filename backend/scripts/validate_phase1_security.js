@@ -396,6 +396,7 @@ async function runTests() {
   console.log('\n[Suite 0] Target Isolation Verification...');
   const client = new Client({ connectionString: DISPOSABLE_DB_URL });
   await client.connect();
+  const dbCheck = await client.query('SELECT inet_server_port() as port, current_database() as db;');
   const clientPort = new URL(DISPOSABLE_DB_URL).port;
   assert(dbCheck.rows[0].port === 5433 || dbCheck.rows[0].port === 5432 || clientPort === '5433', 'S0-A: Database target verified as port 5433 local loopback');
   assert(dbCheck.rows[0].db === 'postgres', 'S0-B: Target database verified as disposable postgres');
