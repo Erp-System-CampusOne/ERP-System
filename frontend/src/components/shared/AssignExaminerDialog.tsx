@@ -18,12 +18,16 @@ interface AssignExaminerDialogProps {
   departmentName?: string;
   className?: string;
   triggerText?: string;
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  size?: 'default' | 'sm' | 'lg' | 'icon';
 }
 
 export function AssignExaminerDialog({
   departmentName,
   className,
   triggerText = 'Assign Examiner',
+  variant,
+  size,
 }: AssignExaminerDialogProps) {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -103,7 +107,7 @@ export function AssignExaminerDialog({
 
   const handleCopy = () => {
     if (createdCredentials) {
-      navigator.clipboard.writeText(`CampusOne ID: ${createdCredentials.id}\nPassword: ${createdCredentials.password}`);
+      navigator.clipboard.writeText(`Campus ID: ${createdCredentials.id}\nPassword: ${createdCredentials.password}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -127,7 +131,7 @@ export function AssignExaminerDialog({
       if (!open) setTimeout(resetForm, 200);
     }}>
       <DialogTrigger asChild>
-        <Button className={className}>
+        <Button variant={variant} size={size} className={className}>
           <ShieldCheck className="w-4 h-4 mr-2" />
           {triggerText}
         </Button>
@@ -269,7 +273,7 @@ export function AssignExaminerDialog({
 
               <div className="space-y-3 bg-muted/50 p-4 rounded-xl border border-border">
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">CampusOne ID (Login ID)</Label>
+                  <Label className="text-xs text-muted-foreground">Campus ID (Login ID)</Label>
                   <p className="font-mono text-sm font-bold text-primary">{createdCredentials.id}</p>
                 </div>
                 <div className="space-y-1">

@@ -125,6 +125,38 @@ export function AppLayout({ children }: AppLayoutProps) {
     window.location.href = '/login';
   };
 
+  const isNavItemActive = (itemHref: string) => {
+    const currentPath = location.pathname;
+    const currentSearch = location.search;
+    const currentFullUrl = currentPath + currentSearch;
+
+    // 1. Exact full URL match (path + query string)
+    if (currentFullUrl === itemHref) return true;
+
+    // 2. Query param based navigation (e.g. /hod?tab=faculty)
+    if (itemHref.includes('?')) {
+      return currentFullUrl === itemHref;
+    }
+
+    // 3. Base path when query parameters are present on the current page
+    // If the URL has an active query string (e.g. ?tab=faculty), the base tab (e.g. /hod)
+    // should ONLY match if currentSearch represents the default overview tab.
+    if (currentSearch && currentSearch !== '' && currentSearch !== '?tab=overview') {
+      return false;
+    }
+
+    // 4. Exact path match when no non-default search parameters
+    if (currentPath === itemHref) return true;
+
+    // 5. Nested path matching for multi-level paths (e.g. /finance/structures/create -> /finance/structures)
+    const dashboardRoots = ['/admin', '/student', '/faculty', '/hod', '/finance', '/library', '/analytics'];
+    if (!dashboardRoots.includes(itemHref) && currentPath.startsWith(itemHref + '/')) {
+      return true;
+    }
+
+    return false;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b-2 border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -140,8 +172,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           <nav className="hidden md:flex items-center justify-center gap-0.5 flex-1 overflow-hidden">
             {navItems.map((item) => {
-              const isActive = (item.href.includes('?') ? (location.pathname + location.search) === item.href : location.pathname === item.href) || 
-                (item.href !== '/admin' && item.href !== '/student' && item.href !== '/faculty' && item.href !== '/hod' && item.href !== '/finance' && item.href !== '/library' && item.href !== '/analytics' && !item.href.includes('?') && location.pathname.startsWith(item.href));
+              const isActive = isNavItemActive(item.href);
               return (
                 <Link
                   key={item.href}
@@ -150,13 +181,18 @@ export function AppLayout({ children }: AppLayoutProps) {
                   className={cn(
                     "group flex items-center gap-0 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-200 overflow-hidden shrink-0",
                     isActive
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-primary/10 text-primary font-semibold"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                 >
                   <item.icon className="w-4 h-4 shrink-0" />
                   <span
-                    className="overflow-hidden whitespace-nowrap transition-all duration-200 ease-in-out max-w-0 group-hover:max-w-[120px] group-hover:ml-1.5 opacity-0 group-hover:opacity-100"
+                    className={cn(
+                      "overflow-hidden whitespace-nowrap transition-all duration-200 ease-in-out",
+                      isActive
+                        ? "max-w-[160px] ml-1.5 opacity-100"
+                        : "max-w-0 group-hover:max-w-[140px] group-hover:ml-1.5 opacity-0 group-hover:opacity-100"
+                    )}
                   >
                     {item.label}
                   </span>
@@ -241,7 +277,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <div className="md:hidden border-t-2 border-border bg-background">
             <nav className="flex flex-col p-4 gap-1">
               {navItems.map((item) => {
-                const isActive = location.pathname === item.href;
+                const isActive = isNavItemActive(item.href);
                 return (
                   <Link
                     key={item.href}

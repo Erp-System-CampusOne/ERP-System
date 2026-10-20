@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
-  ShieldCheck, Search, Users, GraduationCap, BookOpen,
+  ShieldCheck, Users, GraduationCap,
   Award, CheckCircle2, AlertCircle, Phone, Mail, UserX,
-  Loader2, RefreshCw, Plus, Building2, Calendar, Sparkles, Check, ArrowRight
+  Loader2, RefreshCw, Building2, Calendar, Sparkles, Check
 } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useInstitutionHod, useRelieveInstitutionHod } from '@/features/admin/hooks';
@@ -55,13 +55,13 @@ export default function AdminHod() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header Banner */}
-      <div className="border-b-2 border-border/60 bg-gradient-to-r from-purple-500/10 via-purple-500/5 to-background">
+      <div className="border-b-2 border-border/60 bg-gradient-to-r from-primary/10 via-primary/5 to-background">
         <div className="mx-auto max-w-7xl px-4 py-8 md:px-6">
           <Wrapper variants={container} initial="hidden" animate="show" className="space-y-6">
             <Wrapper variants={item}>
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-3.5 rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-600/20">
+                  <div className="p-3.5 rounded-2xl bg-primary text-primary-foreground shadow-md shadow-primary/20">
                     <Award className="w-8 h-8" />
                   </div>
                   <div>
@@ -69,7 +69,7 @@ export default function AdminHod() {
                       <h1 className="font-display text-2xl md:text-3xl font-bold tracking-tight">
                         Institution Head of Department
                       </h1>
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary border border-primary/30">
                         Single Institution Role
                       </span>
                     </div>
@@ -85,14 +85,13 @@ export default function AdminHod() {
                     size="sm"
                     onClick={() => refetch()}
                     disabled={isFetching}
-                    className="h-10"
                   >
                     <RefreshCw className={cn("w-4 h-4 mr-2", isFetching && "animate-spin")} />
                     Refresh
                   </Button>
                   <AddHodDialog
                     triggerText={activeHod ? "Replace / Re-appoint HOD" : "+ Appoint Institution HOD"}
-                    className="bg-purple-600 hover:bg-purple-700 text-white font-semibold h-10 px-4 shadow-sm"
+                    size="sm"
                   />
                 </div>
               </div>
@@ -142,14 +141,14 @@ export default function AdminHod() {
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Academic Divisions
                       </p>
-                      <p className="font-display text-2xl font-bold mt-1 text-purple-600 dark:text-purple-400 tabular-nums">
+                      <p className="font-display text-2xl font-bold mt-1 tabular-nums">
                         {departments.length} Departments
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         CSE • ECE • MECH
                       </p>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-600">
+                    <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
                       <Building2 className="w-5 h-5" />
                     </div>
                   </CardContent>
@@ -210,12 +209,12 @@ export default function AdminHod() {
 
         {/* ─── Active Institution HOD Showcase Card ─── */}
         {!isLoading && activeHod && (
-          <Card className="border-2 border-purple-500/30 bg-gradient-to-br from-card via-card to-purple-500/5 shadow-md overflow-hidden">
-            <div className="h-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-500" />
+          <Card className="border-2 border-border/60 bg-card shadow-xs overflow-hidden">
+            <div className="h-2 bg-gradient-to-r from-primary/80 via-primary to-primary/60" />
             <CardHeader className="pb-4">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-500 text-white flex items-center justify-center font-display text-2xl font-bold shadow-md shadow-purple-600/20">
+                  <div className="w-16 h-16 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center font-display text-2xl font-bold shadow-md shadow-primary/20">
                     {activeHod.name.split(' ').map((n: string) => n[0]).slice(0, 2).join('')}
                   </div>
                   <div>
@@ -227,7 +226,7 @@ export default function AdminHod() {
                         <Check className="w-3.5 h-3.5" /> Appointed
                       </span>
                     </div>
-                    <p className="text-sm font-medium text-purple-600 dark:text-purple-400 mt-0.5">
+                    <p className="text-sm font-medium text-muted-foreground mt-0.5">
                       {activeHod.designation} • {activeHod.qualification}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -239,7 +238,8 @@ export default function AdminHod() {
                 <div className="flex items-center gap-2.5">
                   <Button
                     variant="outline"
-                    className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:hover:bg-red-950/30"
+                    size="sm"
+                    className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:border-destructive hover:text-destructive"
                     onClick={() => setShowRelieveModal(true)}
                   >
                     <UserX className="w-4 h-4 mr-2" />
@@ -247,7 +247,8 @@ export default function AdminHod() {
                   </Button>
                   <AddHodDialog
                     triggerText="Replace Appointee"
-                    className="bg-purple-600 hover:bg-purple-700 text-white font-medium"
+                    variant="outline"
+                    size="sm"
                   />
                 </div>
               </div>
@@ -256,7 +257,7 @@ export default function AdminHod() {
             <CardContent className="pt-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 p-4 rounded-2xl bg-muted/40 border border-border">
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">CampusOne ID</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Campus ID</p>
                   <p className="font-mono font-bold text-sm text-primary">{activeHod.campusId || 'COID1002'}</p>
                 </div>
                 <div className="space-y-1">
@@ -286,8 +287,8 @@ export default function AdminHod() {
                 </div>
               </div>
 
-              <div className="mt-4 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-700 dark:text-purple-300 flex items-start gap-2.5">
-                <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-purple-600" />
+              <div className="mt-4 p-3 rounded-xl bg-primary/5 border border-primary/20 text-xs text-foreground flex items-start gap-2.5">
+                <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-primary" />
                 <span>
                   <strong>Full Institution Scope:</strong> {activeHod.name} is the sole academic head governing all {departments.length} departments. They hold authority over course offerings, timetable generation, faculty allocation, document verification, and examination marks approval across the entire institution.
                 </span>
@@ -313,7 +314,7 @@ export default function AdminHod() {
               </div>
               <AddHodDialog
                 triggerText="+ Appoint Institution HOD"
-                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 h-11"
+                size="sm"
               />
             </CardContent>
           </Card>
@@ -337,7 +338,7 @@ export default function AdminHod() {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {departments.map((dept: any) => (
-              <Card key={dept.id} className="border-2 border-border/70 hover:border-purple-500/40 transition-all bg-card shadow-sm">
+              <Card key={dept.id} className="border-2 border-border/70 hover:border-primary/30 transition-all bg-card shadow-sm">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -348,7 +349,7 @@ export default function AdminHod() {
                         {dept.name}
                       </CardTitle>
                     </div>
-                    <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600">
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary">
                       <Building2 className="w-4 h-4" />
                     </div>
                   </div>
@@ -371,7 +372,7 @@ export default function AdminHod() {
 
                   <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/60">
                     <span>Executive Oversight:</span>
-                    <span className="font-medium text-purple-600 dark:text-purple-400">
+                    <span className="font-medium text-foreground">
                       {activeHod ? activeHod.name : 'Vacant'}
                     </span>
                   </div>
@@ -393,7 +394,7 @@ export default function AdminHod() {
                   <thead className="bg-muted/50 border-b border-border text-xs uppercase text-muted-foreground font-semibold">
                     <tr>
                       <th className="px-4 py-3">Appointee</th>
-                      <th className="px-4 py-3">CampusOne ID</th>
+                      <th className="px-4 py-3">Campus ID</th>
                       <th className="px-4 py-3">Email</th>
                       <th className="px-4 py-3">Appointed Date</th>
                       <th className="px-4 py-3">Relieved Date</th>

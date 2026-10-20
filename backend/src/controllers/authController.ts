@@ -10,14 +10,36 @@ const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export const loginUser = async (req: Request, res: Response) => {
   try {
-    const { identifier, password, role } = req.body;
+    const { identifier, campusId, password, role, email, username, rollNumber, phone } = req.body;
 
-    if (!identifier || !password) {
-      return res.status(400).json({ success: false, message: 'Identifier and password are required' });
+    const rawId = (campusId || identifier || '').trim();
+
+    if (!rawId || !password) {
+      if (email || username || rollNumber || phone) {
+        return res.status(400).json({
+          success: false,
+          message: 'Login requires Campus ID and password. Alternative identifiers (email, roll number, username, phone number) are not permitted.'
+        });
+      }
+      return res.status(400).json({ success: false, message: 'Campus ID and password are required' });
+    }
+
+    if (rawId.includes('@')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Email login is disabled. Please log in using your Campus ID (e.g., COID1001).'
+      });
+    }
+
+    if (!/^COID\d+$/i.test(rawId)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid Campus ID or password'
+      });
     }
 
     // Step 1: Concurrency-safe credential verification & lockout enforcement
-    const verifyResult = await verifyCredentials(identifier, password);
+    const verifyResult = await verifyCredentials(rawId, password);
 
     if (!verifyResult.success) {
       if (verifyResult.locked) {
@@ -26,7 +48,7 @@ export const loginUser = async (req: Request, res: Response) => {
           message: verifyResult.error || 'Account temporarily locked. Please try again later.'
         });
       }
-      return res.status(401).json({ success: false, message: verifyResult.error || 'Invalid CampusOne ID or password' });
+      return res.status(401).json({ success: false, message: verifyResult.error || 'Invalid Campus ID or password' });
     }
 
     const user = verifyResult.user!;
@@ -141,6 +163,7 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
       where: { id: userId },
       select: {
         id: true,
+        campusId: true,
         name: true,
         email: true,
         role: true,

@@ -39,19 +39,24 @@ export default function Login() {
     
     const trimmedId = identifier.trim().toUpperCase();
     if (!trimmedId || !password.trim()) {
-      setError('Please enter your CampusOne ID and password');
+      setError('Please enter your Campus ID and password');
       return;
     }
 
     if (trimmedId.includes('@')) {
-      setError('Email login is disabled. Please log in using your CampusOne ID (e.g., COID1001).');
+      setError('Email login is disabled. Please log in using your Campus ID (e.g., COID1001).');
+      return;
+    }
+
+    if (!/^COID\d+$/i.test(trimmedId)) {
+      setError('Invalid Campus ID format. Campus ID must be in the format COID#### (e.g., COID1001).');
       return;
     }
 
     setIsLoading(true);
     
     try {
-      const loggedInUser = await login({ identifier: trimmedId, password });
+      const loggedInUser = await login({ campusId: trimmedId, identifier: trimmedId, password });
       
       const from = (location.state as Record<string, string> | null)?.from;
       if (from && from !== '/') {
@@ -61,7 +66,7 @@ export default function Login() {
         navigate(getDashboardPath(userRole), { replace: true });
       }
     } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || 'Invalid CampusOne ID or password. Please try again.';
+      const message = err?.response?.data?.message || err?.message || 'Invalid Campus ID or password. Please try again.';
       setError(message);
     } finally {
       setIsLoading(false);
@@ -142,19 +147,20 @@ export default function Login() {
           <Card className="border-2 shadow-lg">
             <CardHeader className="text-center space-y-2">
               <CardTitle className="text-2xl font-display">Welcome Back</CardTitle>
-              <CardDescription>Enter your CampusOne ID and password to access your dashboard</CardDescription>
+              <CardDescription>Enter your registered Campus ID and password to access your dashboard</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="identifier" className="text-sm font-semibold">
-                      CampusOne ID
+                    <Label htmlFor="campusId" className="text-sm font-semibold">
+                      Campus ID
                     </Label>
                     <span className="text-xs text-muted-foreground font-mono">Format: COID####</span>
                   </div>
                   <Input
-                    id="identifier"
+                    id="campusId"
+                    name="campusId"
                     type="text"
                     placeholder="e.g., COID1001"
                     value={identifier}
@@ -162,7 +168,9 @@ export default function Login() {
                       const val = e.target.value.toUpperCase();
                       setIdentifier(val);
                       if (val.includes('@')) {
-                        setError('Email login is disabled. Please enter your CampusOne ID (e.g., COID1001).');
+                        setError('Email login is disabled. Please enter your Campus ID (e.g., COID1001).');
+                      } else if (val && !/^COID/i.test(val) && val.length >= 4) {
+                        setError('Campus ID must begin with COID (e.g., COID1001). Alternative identifiers like email, roll number, or username are not permitted.');
                       } else {
                         setError('');
                       }
@@ -177,16 +185,19 @@ export default function Login() {
                   <div className="relative">
                     <Input
                       id="password"
+                      name="password"
                       type={showPassword ? 'text' : 'password'}
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                       className="h-11 pr-10"
+                      autoComplete="current-password"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>

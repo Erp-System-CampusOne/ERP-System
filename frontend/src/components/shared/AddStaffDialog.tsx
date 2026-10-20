@@ -12,9 +12,18 @@ interface AddStaffDialogProps {
   roleLabel: string;
   className?: string;
   defaultDepartmentId?: string;
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  size?: 'default' | 'sm' | 'lg' | 'icon';
 }
 
-export function AddStaffDialog({ role, roleLabel, className, defaultDepartmentId }: AddStaffDialogProps) {
+export function AddStaffDialog({
+  role,
+  roleLabel,
+  className,
+  defaultDepartmentId,
+  variant,
+  size,
+}: AddStaffDialogProps) {
   const { user } = useAuth();
   const createAdminUser = useCreateAdminUser();
   const [isOpen, setIsOpen] = useState(false);
@@ -52,7 +61,7 @@ export function AddStaffDialog({ role, roleLabel, className, defaultDepartmentId
 
   const handleCopy = () => {
     if (createdCredentials) {
-      navigator.clipboard.writeText(`CampusOne ID: ${createdCredentials.id}\nPassword: ${createdCredentials.password}`);
+      navigator.clipboard.writeText(`Campus ID: ${createdCredentials.id}\nPassword: ${createdCredentials.password}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -71,7 +80,7 @@ export function AddStaffDialog({ role, roleLabel, className, defaultDepartmentId
       if (!open) setTimeout(resetForm, 200);
     }}>
       <DialogTrigger asChild>
-        <Button className={className}>
+        <Button variant={variant} size={size} className={className}>
           <Plus className="w-4 h-4 mr-2" />
           Add {roleLabel}
         </Button>
@@ -98,7 +107,7 @@ export function AddStaffDialog({ role, roleLabel, className, defaultDepartmentId
             
             <div className="space-y-3 bg-muted/50 p-4 rounded-xl border border-border">
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">CampusOne ID (Login ID)</Label>
+                <Label className="text-xs text-muted-foreground">Campus ID (Login ID)</Label>
                 <p className="font-mono text-sm font-semibold text-primary">{createdCredentials.id}</p>
               </div>
               <div className="space-y-1">

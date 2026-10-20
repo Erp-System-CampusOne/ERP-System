@@ -17,21 +17,26 @@ const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 /**
- * Resolves user identity from campusId (COID####), rollNumber, or employeeCode.
- * Email login is strictly disabled.
+ * Resolves user identity exclusively from registered Campus ID (COID####).
+ * Alternative identifiers (rollNumber, employeeCode, email, username, phone) are strictly disallowed.
  */
 export async function resolveUserByIdentifier(identifier: string) {
   if (!identifier || typeof identifier !== 'string') return null;
 
   const trimmed = identifier.trim();
   if (trimmed.includes('@')) {
-    // Email is stored for record purposes only, not permitted as a login method
+    // Email is stored for record and recovery purposes only, not permitted as a login credential
     return null;
   }
 
   const upper = trimmed.toUpperCase();
 
-  // 1. Primary: Lookup by CampusOne ID (COID####)
+  // Enforce Campus ID format rules: must begin with COID followed by digits
+  if (!/^COID\d+$/i.test(upper)) {
+    return null;
+  }
+
+  // Sole lookup: by Campus ID (COID####)
   const userByCampusId = await prisma.user.findUnique({
     where: { campusId: upper },
     include: {
@@ -39,37 +44,8 @@ export async function resolveUserByIdentifier(identifier: string) {
       facultyProfile: { include: { department: true } }
     }
   });
-  if (userByCampusId) return userByCampusId;
 
-  // 2. Lookup student rollNumber
-  const student = await prisma.student.findUnique({
-    where: { rollNumber: trimmed },
-    include: {
-      user: {
-        include: {
-          studentProfile: { include: { department: true } },
-          facultyProfile: { include: { department: true } }
-        }
-      }
-    }
-  });
-  if (student && student.user) return student.user;
-
-  // 3. Lookup faculty employeeCode
-  const faculty = await prisma.faculty.findUnique({
-    where: { employeeCode: trimmed },
-    include: {
-      user: {
-        include: {
-          studentProfile: { include: { department: true } },
-          facultyProfile: { include: { department: true } }
-        }
-      }
-    }
-  });
-  if (faculty && faculty.user) return faculty.user;
-
-  return null;
+  return userByCampusId || null;
 }
 
 /**
@@ -86,16 +62,23 @@ export async function verifyCredentials(
   if (trimmed.includes('@')) {
     return {
       success: false,
-      error: 'Email login is disabled. Please log in using your CampusOne ID (e.g., COID1001).'
+      error: 'Email login is disabled. Please log in using your Campus ID (e.g., COID1001).'
     };
   }
 
-  const user = await resolveUserByIdentifier(identifier);
+  // Enforce Campus ID format rules (COID followed by digits)
+  if (!/^COID\d+$/i.test(trimmed)) {
+    // Perform dummy compare to prevent username enumeration via timing attacks
+    await bcrypt.compare(password, DUMMY_HASH);
+    return { success: false, error: 'Invalid Campus ID or password' };
+  }
+
+  const user = await resolveUserByIdentifier(trimmed);
 
   if (!user) {
     // Perform dummy compare to prevent username enumeration via timing attacks
     await bcrypt.compare(password, DUMMY_HASH);
-    return { success: false, error: 'Invalid CampusOne ID or password' };
+    return { success: false, error: 'Invalid Campus ID or password' };
   }
 
   // Check canonical user_credentials table

@@ -1,7 +1,7 @@
 import prisma from '../config/db';
 
 /**
- * Generates a unique CampusOne ID formatted as COID{4 random numbers} (e.g. COID1001 to COID9999).
+ * Generates a unique Campus ID formatted as COID{4 random numbers} (e.g. COID1001 to COID9999).
  * Guarantees zero collisions by checking database records before returning.
  */
 export async function generateUniqueCampusId(txOrPrisma: any = prisma): Promise<string> {
@@ -24,7 +24,7 @@ export async function generateUniqueCampusId(txOrPrisma: any = prisma): Promise<
   }
 
   if (!isUnique) {
-    throw new Error('Unable to generate a unique CampusOne ID. Please contact system administrator.');
+    throw new Error('Unable to generate a unique Campus ID. Please contact system administrator.');
   }
 
   return campusId;

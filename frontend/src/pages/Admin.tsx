@@ -283,7 +283,7 @@ export default function Admin() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <QuickAction href="/admin/students" icon={GraduationCap} label="Students" description="Manage student records" color="bg-emerald-500" />
             <QuickAction href="/admin/faculty" icon={Users} label="Faculty" description="Faculty directory" color="bg-blue-500" />
-            <QuickAction href="/admin/hod" icon={ShieldCheck} label="HODs" description="Department heads" color="bg-purple-600" />
+            <QuickAction href="/admin/hod" icon={ShieldCheck} label="HODs" description="Department heads" color="bg-primary" />
             <QuickAction href="/admin/academics" icon={BookOpen} label="Academics" description="Courses & curriculum" color="bg-violet-500" />
             <QuickAction href="/admin/examinations" icon={FileText} label="Examinations" description="Exam management" color="bg-amber-500" />
           </div>

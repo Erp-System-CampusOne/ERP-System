@@ -14,6 +14,7 @@ interface AddHodDialogProps {
   triggerIcon?: React.ElementType;
   className?: string;
   variant?: 'default' | 'outline' | 'secondary' | 'ghost';
+  size?: 'default' | 'sm' | 'lg' | 'icon';
   onSuccess?: () => void;
 }
 
@@ -22,6 +23,7 @@ export function AddHodDialog({
   triggerIcon: TriggerIcon = Plus,
   className,
   variant = 'default',
+  size,
   onSuccess,
 }: AddHodDialogProps) {
   const { user } = useAuth();
@@ -112,7 +114,7 @@ export function AddHodDialog({
 
   const handleCopy = () => {
     if (createdCredentials) {
-      navigator.clipboard.writeText(`CampusOne ID: ${createdCredentials.id}\nPassword: ${createdCredentials.password}\nEmail: ${email}`);
+      navigator.clipboard.writeText(`Campus ID: ${createdCredentials.id}\nPassword: ${createdCredentials.password}\nEmail: ${email}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -145,7 +147,7 @@ export function AddHodDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant={variant} className={className}>
+        <Button variant={variant} size={size} className={className}>
           <TriggerIcon className="w-4 h-4 mr-2" />
           {triggerText}
         </Button>
@@ -153,7 +155,7 @@ export function AddHodDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Award className="w-5 h-5 text-purple-600" />
+            <Award className="w-5 h-5 text-primary" />
             Appoint Institution Head of Department
           </DialogTitle>
           <DialogDescription>
@@ -200,7 +202,7 @@ export function AddHodDialog({
                 <p className="text-sm font-semibold">Institution Head of Department (All Divisions)</p>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">CampusOne ID (Login ID)</Label>
+                <Label className="text-xs text-muted-foreground">Campus ID (Login ID)</Label>
                 <p className="font-mono text-sm font-bold text-primary">{createdCredentials.id}</p>
               </div>
               <div className="space-y-1">
@@ -257,8 +259,8 @@ export function AddHodDialog({
 
             {activeTab === 'onboard' && (
               <form onSubmit={handleCreate} className="space-y-3.5 py-1">
-                <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-700 dark:text-purple-300 flex items-start gap-2.5">
-                  <Building2 className="w-4 h-4 shrink-0 mt-0.5" />
+                <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 text-xs text-foreground flex items-start gap-2.5">
+                  <Building2 className="w-4 h-4 shrink-0 mt-0.5 text-primary" />
                   <span>
                     The appointed HOD will govern curricula, timetables, and document approvals across all {departments.length} departments.
                   </span>
@@ -326,7 +328,7 @@ export function AddHodDialog({
                   <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createAdminUser.isPending} className="bg-purple-600 hover:bg-purple-700 text-white">
+                  <Button type="submit" disabled={createAdminUser.isPending}>
                     {createAdminUser.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     Confirm & Onboard HOD
                   </Button>
@@ -374,7 +376,7 @@ export function AddHodDialog({
                   <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={promoteFacultyMutation.isPending || !selectedFacultyId} className="bg-purple-600 hover:bg-purple-700 text-white">
+                  <Button type="submit" disabled={promoteFacultyMutation.isPending || !selectedFacultyId}>
                     {promoteFacultyMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     Promote to Institution HOD
                   </Button>

@@ -17,7 +17,8 @@ export interface User {
 }
 
 export interface LoginInput {
-  identifier: string;
+  campusId?: string;
+  identifier?: string;
   password: string;
   role?: 'student' | 'faculty' | 'hod' | 'admin' | 'finance_officer' | 'librarian' | 'analytics' | 'management' | 'examiner';
 }

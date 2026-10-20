@@ -541,7 +541,7 @@ export default function AdminStudents() {
             <div className="p-4 space-y-3">
               <p className="text-sm text-muted-foreground">Share these login credentials with <span className="font-semibold text-foreground">{createdCredentials.name}</span>.</p>
               {[
-                { label: 'CampusOne ID (Login ID)', value: createdCredentials.campusId || createdCredentials.rollNumber, key: 'coid' },
+                { label: 'Campus ID (Login ID)', value: createdCredentials.campusId || '', key: 'coid' },
                 { label: 'Roll Number', value: createdCredentials.rollNumber, key: 'roll' },
                 { label: 'Contact Email', value: createdCredentials.email, key: 'email' },
                 { label: 'Default Password', value: createdCredentials.password, key: 'pass' },

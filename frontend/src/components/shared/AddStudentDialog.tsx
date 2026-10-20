@@ -11,6 +11,8 @@ interface AddStudentDialogProps {
   defaultDepartmentId?: string;
   className?: string;
   triggerText?: string;
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  size?: 'default' | 'sm' | 'lg' | 'icon';
 }
 
 export function AddStudentDialog({
@@ -18,6 +20,8 @@ export function AddStudentDialog({
   defaultDepartmentId = '',
   className,
   triggerText = 'Add Student',
+  variant,
+  size,
 }: AddStudentDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const studentMutations = useStudentMutations();
@@ -88,8 +92,8 @@ export function AddStudentDialog({
 
   const handleCopy = () => {
     if (createdCredentials) {
-      const loginId = createdCredentials.campusId || createdCredentials.rollNumber;
-      const text = `Student: ${createdCredentials.name}\nCampusOne ID (Login ID): ${loginId}\nRoll Number: ${createdCredentials.rollNumber}\nContact Email: ${createdCredentials.email}\nTemporary Password: ${createdCredentials.password}`;
+      const loginId = createdCredentials.campusId || '';
+      const text = `Student: ${createdCredentials.name}\nCampus ID (Login ID): ${loginId}\nRoll Number: ${createdCredentials.rollNumber}\nContact Email: ${createdCredentials.email}\nTemporary Password: ${createdCredentials.password}`;
       navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -99,8 +103,8 @@ export function AddStudentDialog({
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button className={className || "gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"}>
-          <UserPlus className="w-4 h-4" />
+        <Button variant={variant} size={size} className={className}>
+          <UserPlus className="w-4 h-4 mr-2" />
           {triggerText}
         </Button>
       </DialogTrigger>
@@ -121,7 +125,7 @@ export function AddStudentDialog({
               </div>
               <div className="text-sm space-y-1 font-mono pt-2 text-foreground">
                 <p><span className="text-muted-foreground font-sans">Name:</span> {createdCredentials.name}</p>
-                <p><span className="text-muted-foreground font-sans">CampusOne ID (Login ID):</span> <strong className="text-primary">{createdCredentials.campusId || createdCredentials.rollNumber}</strong></p>
+                <p><span className="text-muted-foreground font-sans">Campus ID (Login ID):</span> <strong className="text-primary">{createdCredentials.campusId || ''}</strong></p>
                 <p><span className="text-muted-foreground font-sans">Roll Number:</span> {createdCredentials.rollNumber}</p>
                 <p><span className="text-muted-foreground font-sans">Contact Email:</span> {createdCredentials.email}</p>
                 <p><span className="text-muted-foreground font-sans">Default Password:</span> {createdCredentials.password}</p>
