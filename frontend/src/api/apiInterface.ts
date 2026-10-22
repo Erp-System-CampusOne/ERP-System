@@ -176,6 +176,14 @@ export interface Course {
   faculty?: string;
 }
 
+/** Richer type returned only by GET /courses/:id — extends the list type. */
+export interface CourseDetails extends Course {
+  facultyEmail?: string | null;
+  facultyDepartment?: string | null;
+  facultyDesignation?: string | null;
+}
+
+
 export interface CourseInput {
   code: string;
   name: string;
@@ -205,6 +213,7 @@ export interface DepartmentInput {
 
 export interface TimetableEntry {
   id?: string;
+  courseId?: string;
   dayOfWeek: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
   period: number;
   timeSlot: string;
@@ -588,7 +597,7 @@ export type CreateCourseOutput = Course;
 
 export interface CreateCourseInput extends CourseInput {}
 
-export type GetCourseByIdOutput = Course;
+export type GetCourseByIdOutput = CourseDetails;
 
 export interface GetCourseByIdInput {
   id: string;

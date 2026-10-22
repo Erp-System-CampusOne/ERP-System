@@ -123,10 +123,18 @@ export const getCourseById = async (req: Request, res: Response) => {
   try {
     const course = await prisma.course.findUnique({
       where: { id: req.params.id },
-      include: { department: true, faculty: { include: { user: true } } }
+      include: {
+        department: true,
+        faculty: {
+          include: {
+            user: true,
+            department: true,
+          },
+        },
+      },
     });
     if (!course) return res.status(404).json({ success: false, message: 'Not found' });
-    
+
     res.json({
       id: course.id,
       code: course.code,
@@ -138,7 +146,10 @@ export const getCourseById = async (req: Request, res: Response) => {
       type: course.type,
       description: course.description,
       facultyId: course.facultyId,
-      facultyInstructor: course.faculty?.user.name
+      facultyInstructor: course.faculty?.user.name ?? null,
+      facultyEmail: course.faculty?.user.email ?? null,
+      facultyDepartment: course.faculty?.department.name ?? null,
+      facultyDesignation: course.faculty?.designation ?? null,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error' });
