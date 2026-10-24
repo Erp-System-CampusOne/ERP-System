@@ -7,6 +7,7 @@ import {
   getStudentGrades,
   getStudentFees,
   getCourses,
+  getCourseById,
   getTimetables,
   getNotices,
   getStudentDocuments,
@@ -104,13 +105,28 @@ export function useStudentCourses() {
   });
 }
 
+export function useCourseDetails(courseId: string | null) {
+  return useQuery({
+    queryKey: ['course', 'details', courseId],
+    queryFn: async () => {
+      if (!courseId) throw new Error('No course id');
+      return await getCourseById({ id: courseId });
+    },
+    enabled: !!courseId,
+  });
+}
+
 export function useStudentTimetable() {
   const { data: profile } = useStudentProfile();
 
   return useQuery({
-    queryKey: ['student', 'timetable', profile?.section, profile?.semester],
+    queryKey: ['student', 'timetable', profile?.section, profile?.semester, profile?.department],
     queryFn: async () => {
-      return await getTimetables({ section: profile?.section, semester: profile?.semester });
+      return await getTimetables({
+        section: profile?.section,
+        semester: profile?.semester,
+        department: profile?.department,
+      });
     },
     enabled: !!profile?.section && !!profile?.semester,
   });

@@ -45,6 +45,7 @@ export const getTimetables = async (req: Request, res: Response) => {
       roomNumber: e.roomNumber,
       section: e.section,
       semester: e.semester,
+      courseId: e.courseId,
     }));
 
     res.json({
@@ -100,6 +101,7 @@ export const generateTimetable = async (req: Request, res: Response) => {
       roomNumber: e.roomNumber,
       section: e.section,
       semester: e.semester,
+      courseId: e.courseId,
     }));
 
     res.json({
