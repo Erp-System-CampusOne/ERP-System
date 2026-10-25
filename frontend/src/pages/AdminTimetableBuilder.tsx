@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   Calendar, Plus, Save, Download, RotateCcw,
-  Clock, MapPin, CheckCircle, AlertCircle, X, Loader2
+  Clock, MapPin, CheckCircle, AlertCircle, X, Loader2, Trash2
 } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,6 +59,8 @@ export default function AdminTimetableBuilder() {
   const [selectedSection, setSelectedSection] = useState('A');
   const [localEntries, setLocalEntries] = useState<any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */>([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [deletingEntry, setDeletingEntry] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [periodForm, setPeriodForm] = useState({
     dayOfWeek: 'Monday',
     period: 1,
@@ -70,7 +72,7 @@ export default function AdminTimetableBuilder() {
   const { data: coursesData } = useCourses();
   const { data: facultyData } = useFacultyList();
   const { data: departments } = useDepartments();
-  const { data: timetablesData } = useTimetables();
+  const { data: timetablesData, refetch: refetchTimetables } = useTimetables();
   const timetableMutations = useTimetableMutations();
   
   const courses = Array.isArray(coursesData) ? coursesData : [];
@@ -117,6 +119,13 @@ export default function AdminTimetableBuilder() {
       alert('Please select a department');
       return;
     }
+
+    const missing = localEntries.find(e => !e.courseId || !e.facultyId);
+    if (missing) {
+      alert(`Cannot save timetable: Entry on ${missing.dayOfWeek} Period ${missing.period} is missing a course or faculty.`);
+      return;
+    }
+
     try {
       await timetableMutations.save.mutateAsync({
         department: selectedDepartment,
@@ -125,9 +134,36 @@ export default function AdminTimetableBuilder() {
         entries: localEntries
       });
       alert('Timetable saved successfully!');
-    } catch (err) {
+      if (refetchTimetables) {
+        await refetchTimetables();
+      }
+    } catch (err: any) {
       console.error(err);
-      alert('Failed to save timetable');
+      alert(err.message || 'Failed to save timetable');
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingEntry) return;
+    setIsDeleting(true);
+    try {
+      if (deletingEntry.id) {
+        await timetableMutations.deleteEntry.mutateAsync(deletingEntry.id);
+      }
+      setLocalEntries(prev => prev.filter(e => {
+        if (deletingEntry.id && e.id) return e.id !== deletingEntry.id;
+        return !(e.dayOfWeek === deletingEntry.dayOfWeek && e.period === deletingEntry.period);
+      }));
+      alert(`Lecture "${deletingEntry.subjectCode || deletingEntry.subjectName}" (${deletingEntry.dayOfWeek} Period ${deletingEntry.period}) deleted successfully.`);
+      setDeletingEntry(null);
+      if (refetchTimetables) {
+        await refetchTimetables();
+      }
+    } catch (err: any) {
+      console.error('Failed to delete lecture:', err);
+      alert(err.message || 'Failed to delete lecture');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -299,8 +335,21 @@ export default function AdminTimetableBuilder() {
                           return (
                             <td key={`${day}-${slot.period}`} className="p-2 align-top">
                               {entry ? (
-                                <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 hover:border-amber-300 transition-colors cursor-pointer group">
-                                  <p className="font-medium text-xs text-foreground line-clamp-2">{entry.subjectName}</p>
+                                <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 hover:border-amber-300 transition-colors group relative">
+                                  <div className="flex items-start justify-between gap-1">
+                                    <p className="font-medium text-xs text-foreground line-clamp-2">{entry.subjectName}</p>
+                                    <button
+                                      type="button"
+                                      title="Delete lecture"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeletingEntry(entry);
+                                      }}
+                                      className="opacity-60 hover:opacity-100 hover:text-destructive p-0.5 rounded transition-all shrink-0 cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
                                   <p className="text-xs text-muted-foreground mt-1">{entry.facultyName}</p>
                                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                                     <MapPin className="w-3 h-3" /> {entry.roomNumber}
@@ -431,6 +480,60 @@ export default function AdminTimetableBuilder() {
                 <Button type="submit">Add Period</Button>
               </div>
             </form>
+          </motion.div>
+        </div>
+      )}
+      {/* Delete Lecture Confirmation Modal */}
+      {deletingEntry && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-card w-full max-w-md rounded-2xl border-2 border-border shadow-xl p-6"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 rounded-xl bg-destructive/10 text-destructive">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-display text-lg font-bold">Delete Timetable Lecture</h3>
+                <p className="text-xs text-muted-foreground">Remove this lecture from the class timetable</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 space-y-2 text-xs mb-4">
+              <div className="flex justify-between border-b border-border/40 pb-2">
+                <span className="text-muted-foreground">Course</span>
+                <span className="font-semibold text-foreground">{deletingEntry.subjectName}</span>
+              </div>
+              <div className="flex justify-between border-b border-border/40 pb-2">
+                <span className="text-muted-foreground">Schedule</span>
+                <span className="font-medium text-foreground">{deletingEntry.dayOfWeek}, Period {deletingEntry.period}</span>
+              </div>
+              <div className="flex justify-between border-b border-border/40 pb-2">
+                <span className="text-muted-foreground">Faculty</span>
+                <span className="font-medium text-foreground">{deletingEntry.facultyName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Room</span>
+                <span className="font-mono text-primary font-medium">{deletingEntry.roomNumber}</span>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-muted-foreground bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 p-2.5 rounded-lg flex items-start gap-2 mb-4">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+              <span>Only this lecture will be deleted. All other entries remain unaffected.</span>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" disabled={isDeleting} onClick={() => setDeletingEntry(null)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" disabled={isDeleting} onClick={handleConfirmDelete}>
+                {isDeleting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Trash2 className="w-4 h-4 mr-1" />}
+                Delete Lecture
+              </Button>
+            </div>
           </motion.div>
         </div>
       )}

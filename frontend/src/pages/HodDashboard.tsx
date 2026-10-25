@@ -6,7 +6,7 @@ import {
   FileCheck, Plus, Search, CheckCircle2,
   Download, Save, Loader2, UploadCloud,
   XCircle, ArrowRight, Award, Clock, AlertCircle,
-  Building2, Sparkles
+  Building2, Sparkles, Trash2
 } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -217,26 +217,29 @@ export default function HodDashboard() {
     facultyId: '',
     roomNumber: 'LH-101'
   });
+  const [deletingLecture, setDeletingLecture] = useState<any | null>(null);
+  const [isDeletingLecture, setIsDeletingLecture] = useState<boolean>(false);
 
   // Fetch timetable entries for selected dept, semester, section
-  useEffect(() => {
+  const fetchTimetable = async () => {
     if (!deptName) return;
-    const fetchTimetable = async () => {
-      try {
-        const res = await fetch(
-          `${apiConfig.baseUrl}/academics/timetable?department=${encodeURIComponent(deptName)}&semester=${timetableSemester}&section=${timetableSection}`,
-          { headers: { 'Content-Type': 'application/json', ...apiConfig.headers } }
-        );
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data.entries)) {
-            setTimetableEntries(data.entries);
-          }
+    try {
+      const res = await fetch(
+        `${apiConfig.baseUrl}/academics/timetable?department=${encodeURIComponent(deptName)}&semester=${timetableSemester}&section=${timetableSection}`,
+        { headers: { 'Content-Type': 'application/json', ...apiConfig.headers } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.entries)) {
+          setTimetableEntries(data.entries);
         }
-      } catch (e) {
-        console.error('Failed to load timetable:', e);
       }
-    };
+    } catch (e) {
+      console.error('Failed to load timetable:', e);
+    }
+  };
+
+  useEffect(() => {
     fetchTimetable();
   }, [deptName, timetableSemester, timetableSection]);
 
@@ -256,7 +259,7 @@ export default function HodDashboard() {
       period: Number(periodForm.period),
       courseId: crs.id,
       facultyId: fac.id,
-      roomNumber: periodForm.roomNumber,
+      roomNumber: periodForm.roomNumber || 'LH-101',
       subjectCode: crs.code,
       subjectName: crs.name,
       facultyName: (fac as any).user?.name || fac.id,
@@ -274,6 +277,13 @@ export default function HodDashboard() {
 
   const handleSaveTimetable = async () => {
     try {
+      // Validate that each entry has a course and faculty assigned
+      const invalidEntry = timetableEntries.find(entry => !entry.courseId || !entry.facultyId);
+      if (invalidEntry) {
+        alert(`Cannot save timetable: The lecture on ${invalidEntry.dayOfWeek} Period ${invalidEntry.period} is missing a course or faculty assignment.`);
+        return;
+      }
+
       await timetableMutations.save.mutateAsync({
         department: deptName,
         semester: timetableSemester,
@@ -281,9 +291,36 @@ export default function HodDashboard() {
         entries: timetableEntries
       });
       alert('Department Timetable saved successfully!');
-    } catch (e) {
-      console.error(e);
-      alert('Failed to save timetable');
+      await fetchTimetable();
+    } catch (e: any) {
+      console.error('Failed to save timetable:', e);
+      alert(e?.message || 'Failed to save timetable');
+    }
+  };
+
+  const handleConfirmDeleteLecture = async () => {
+    if (!deletingLecture) return;
+    setIsDeletingLecture(true);
+    try {
+      if (deletingLecture.id) {
+        await timetableMutations.deleteEntry.mutateAsync(deletingLecture.id);
+      }
+      setTimetableEntries(prev =>
+        prev.filter(entry => {
+          if (deletingLecture.id && entry.id) {
+            return entry.id !== deletingLecture.id;
+          }
+          return !(entry.dayOfWeek === deletingLecture.dayOfWeek && entry.period === deletingLecture.period);
+        })
+      );
+      alert(`Lecture "${deletingLecture.subjectCode || deletingLecture.subjectName}" (${deletingLecture.dayOfWeek} Period ${deletingLecture.period}) deleted successfully.`);
+      setDeletingLecture(null);
+      await fetchTimetable();
+    } catch (err: any) {
+      console.error('Failed to delete lecture:', err);
+      alert(err?.message || 'Failed to delete lecture from timetable');
+    } finally {
+      setIsDeletingLecture(false);
     }
   };
 
@@ -1355,26 +1392,44 @@ export default function HodDashboard() {
                             return (
                               <td key={slot.period} className="p-2 text-center align-top border-l border-border/40">
                                 {entry ? (
-                                  <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-xs text-left shadow-2xs">
-                                    <div className="font-bold text-primary font-mono">{entry.subjectCode}</div>
-                                    <div className="text-foreground font-medium truncate">{entry.subjectName}</div>
+                                  <div className="group relative p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-xs text-left shadow-2xs hover:bg-primary/15 transition-all">
+                                    <div className="flex items-start justify-between gap-1">
+                                      <div className="font-bold text-primary font-mono">{entry.subjectCode}</div>
+                                      <button
+                                        type="button"
+                                        title="Delete this lecture"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setDeletingLecture(entry);
+                                        }}
+                                        className="opacity-70 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 p-1 -mt-1 -mr-1 rounded-md transition-all text-muted-foreground cursor-pointer"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                    <div className="text-foreground font-medium truncate mt-0.5">{entry.subjectName}</div>
                                     <div className="text-muted-foreground text-[10px] truncate">{entry.facultyName}</div>
-                                    <div className="text-[10px] text-primary/80 font-semibold mt-1">Rm: {entry.roomNumber}</div>
+                                    <div className="text-[10px] text-primary/80 font-semibold mt-1 flex items-center justify-between">
+                                      <span>Rm: {entry.roomNumber}</span>
+                                      <span className="text-[9px] text-muted-foreground font-mono">P{entry.period}</span>
+                                    </div>
                                   </div>
                                 ) : (
                                   <button
                                     type="button"
                                     onClick={() => {
+                                      const defaultCourse = deptCourses[0];
+                                      const defaultFacId = (defaultCourse as any)?.facultyId || deptFaculty[0]?.id || '';
                                       setPeriodForm({
                                         dayOfWeek: day,
                                         period: slot.period,
-                                        courseId: deptCourses[0]?.id || '',
-                                        facultyId: deptFaculty[0]?.id || '',
+                                        courseId: defaultCourse?.id || '',
+                                        facultyId: defaultFacId,
                                         roomNumber: 'LH-101'
                                       });
                                       setShowAddPeriodModal(true);
                                     }}
-                                    className="w-full h-16 rounded-xl border-2 border-dashed border-border/60 hover:border-primary/60 hover:bg-muted/30 flex items-center justify-center text-muted-foreground transition-all"
+                                    className="w-full h-16 rounded-xl border-2 border-dashed border-border/60 hover:border-primary/60 hover:bg-muted/30 flex items-center justify-center text-muted-foreground transition-all cursor-pointer"
                                   >
                                     <Plus className="w-4 h-4 opacity-50" />
                                   </button>
@@ -1769,10 +1824,11 @@ export default function HodDashboard() {
                   onChange={(e) => {
                     const cId = e.target.value;
                     const matchedCourse = deptCourses.find(c => c.id === cId);
+                    const matchedFacId = (matchedCourse as any)?.facultyId || periodForm.facultyId || deptFaculty[0]?.id || '';
                     setPeriodForm({
                       ...periodForm,
                       courseId: cId,
-                      facultyId: (matchedCourse as any)?.facultyId || periodForm.facultyId
+                      facultyId: matchedFacId
                     });
                   }}
                 >
@@ -1816,6 +1872,94 @@ export default function HodDashboard() {
                 <Button type="submit">Add to Schedule</Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* ─── MODAL: DELETE TIMETABLE LECTURE CONFIRMATION ─── */}
+      {deletingLecture && (
+        <Dialog open={!!deletingLecture} onOpenChange={(open) => !open && !isDeletingLecture && setDeletingLecture(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-destructive/10 text-destructive shrink-0">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <DialogTitle className="font-display text-lg">Delete Scheduled Lecture</DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground">
+                    Are you sure you want to remove this lecture from the timetable?
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 space-y-2.5 text-xs my-2">
+              <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                <span className="text-muted-foreground">Course</span>
+                <span className="font-semibold text-foreground text-right">
+                  {deletingLecture.subjectCode} - {deletingLecture.subjectName}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                <span className="text-muted-foreground">Schedule</span>
+                <span className="font-medium text-foreground">
+                  {deletingLecture.dayOfWeek}, Period {deletingLecture.period} ({deletingLecture.timeSlot || 'Standard Slot'})
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                <span className="text-muted-foreground">Faculty Instructor</span>
+                <span className="font-medium text-foreground">
+                  {deletingLecture.facultyName || 'Unassigned'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                <span className="text-muted-foreground">Room / Lab</span>
+                <span className="font-mono text-primary font-medium">
+                  {deletingLecture.roomNumber || 'LH-101'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Target Class</span>
+                <span className="font-medium text-foreground">
+                  Semester {deletingLecture.semester || timetableSemester} • Section {deletingLecture.section || timetableSection}
+                </span>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-muted-foreground bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 p-2.5 rounded-lg flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+              <span>
+                Database safety: Only this selected lecture will be removed. All other timetable periods, courses, and faculty records will remain unchanged.
+              </span>
+            </div>
+
+            <DialogFooter className="pt-2 flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isDeletingLecture}
+                onClick={() => setDeletingLecture(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={isDeletingLecture}
+                onClick={handleConfirmDeleteLecture}
+              >
+                {isDeletingLecture ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-1.5" /> Confirm Delete
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
