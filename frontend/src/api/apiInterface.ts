@@ -98,9 +98,9 @@ export interface AttendanceAggregateReport {
   totalStudentsEnrolled: number;
   defaultersCount?: number;
   departmentAverages?: {
-  department?: string;
-  percentage?: number;
-}[];
+    department?: string;
+    percentage?: number;
+  }[];
 }
 
 export interface SubjectGrade {
@@ -176,6 +176,14 @@ export interface Course {
   faculty?: string;
 }
 
+/** Richer type returned only by GET /courses/:id — extends the list type. */
+export interface CourseDetails extends Course {
+  facultyEmail?: string | null;
+  facultyDepartment?: string | null;
+  facultyDesignation?: string | null;
+}
+
+
 export interface CourseInput {
   code: string;
   name: string;
@@ -205,6 +213,11 @@ export interface DepartmentInput {
 
 export interface TimetableEntry {
   id?: string;
+  courseId?: string;
+  facultyId?: string;
+  departmentId?: string;
+  semester?: number;
+  section?: string;
   dayOfWeek: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
   period: number;
   timeSlot: string;
@@ -263,10 +276,10 @@ export interface MarksSubmissionInput {
   courseCode: string;
   section?: string;
   results: {
-  studentId: string;
-  internalScore: number;
-  endSemScore: number;
-}[];
+    studentId: string;
+    internalScore: number;
+    endSemScore: number;
+  }[];
 }
 
 export interface FeeStructure {
@@ -430,9 +443,9 @@ export interface AdmissionsMetrics {
   admittedStudents: number;
   acceptanceRate: number;
   genderRatio?: {
-  male?: number;
-  female?: number;
-};
+    male?: number;
+    female?: number;
+  };
   programBreakdown?: { program: string; applications: number; admitted: number }[];
   statusBreakdown?: { status: string; count: number }[];
 }
@@ -442,9 +455,9 @@ export interface AcademicMetrics {
   medianCGPA: number;
   backlogRate?: number;
   departmentPassRates?: {
-  department?: string;
-  passRate?: number;
-}[];
+    department?: string;
+    passRate?: number;
+  }[];
   cgpaDistribution?: { range: string; students: number }[];
   backlogBySemester?: { semester: string; backlogs: number }[];
   toppers?: { name: string; cgpa: number; department: string }[];
@@ -463,15 +476,15 @@ export interface PlacementMetrics {
 
 export type LoginUserOutput = AuthResponse;
 
-export interface LoginUserInput extends LoginInput {}
+export interface LoginUserInput extends LoginInput { }
 
 export type LogoutUserOutput = GenericStatusResponse;
 
-export interface LogoutUserInput {}
+export interface LogoutUserInput { }
 
 export type GetCurrentUserOutput = User;
 
-export interface GetCurrentUserInput {}
+export interface GetCurrentUserInput { }
 
 export type GetStudentsOutput = Student[];
 
@@ -484,7 +497,7 @@ export interface GetStudentsInput {
 
 export type CreateStudentOutput = Student;
 
-export interface CreateStudentInput extends StudentInput {}
+export interface CreateStudentInput extends StudentInput { }
 
 export type GetStudentByIdOutput = Student;
 
@@ -545,7 +558,7 @@ export interface GetFacultyListInput {
 
 export type CreateFacultyOutput = Faculty;
 
-export interface CreateFacultyInput extends FacultyInput {}
+export interface CreateFacultyInput extends FacultyInput { }
 
 export type GetFacultyByIdOutput = Faculty;
 
@@ -567,7 +580,7 @@ export interface GetFacultyWorkloadInput {
 
 export type MarkAttendanceOutput = GenericStatusResponse;
 
-export interface MarkAttendanceInput extends AttendanceMarkInput {}
+export interface MarkAttendanceInput extends AttendanceMarkInput { }
 
 export type GetAttendanceReportOutput = AttendanceAggregateReport;
 
@@ -586,9 +599,9 @@ export interface GetCoursesInput {
 
 export type CreateCourseOutput = Course;
 
-export interface CreateCourseInput extends CourseInput {}
+export interface CreateCourseInput extends CourseInput { }
 
-export type GetCourseByIdOutput = Course;
+export type GetCourseByIdOutput = CourseDetails;
 
 export interface GetCourseByIdInput {
   id: string;
@@ -602,11 +615,11 @@ export interface UpdateCourseInput extends CourseInput {
 
 export type GetDepartmentsOutput = Department[];
 
-export interface GetDepartmentsInput {}
+export interface GetDepartmentsInput { }
 
 export type CreateDepartmentOutput = Department;
 
-export interface CreateDepartmentInput extends DepartmentInput {}
+export interface CreateDepartmentInput extends DepartmentInput { }
 
 export type GetTimetablesOutput = TimetableGrid;
 
@@ -619,7 +632,7 @@ export interface GetTimetablesInput {
 
 export type GenerateTimetableOutput = TimetableGrid;
 
-export interface GenerateTimetableInput extends TimetableGenerateInput {}
+export interface GenerateTimetableInput extends TimetableGenerateInput { }
 
 export type GetExaminationsOutput = Examination[];
 
@@ -630,7 +643,7 @@ export interface GetExaminationsInput {
 
 export type CreateExaminationOutput = Examination;
 
-export interface CreateExaminationInput extends ExaminationInput {}
+export interface CreateExaminationInput extends ExaminationInput { }
 
 export type GetExamResultsOutput = ExamResult[];
 
@@ -647,11 +660,11 @@ export interface SubmitExamResultsInput extends MarksSubmissionInput {
 
 export type GetFeeStructuresOutput = FeeStructure[];
 
-export interface GetFeeStructuresInput {}
+export interface GetFeeStructuresInput { }
 
 export type CreateFeeStructureOutput = FeeStructure;
 
-export interface CreateFeeStructureInput extends FeeStructureInput {}
+export interface CreateFeeStructureInput extends FeeStructureInput { }
 
 export type GetFeeTransactionsOutput = FeeTransaction[];
 
@@ -662,7 +675,7 @@ export interface GetFeeTransactionsInput {
 
 export type RecordFeePaymentOutput = FeeTransaction;
 
-export interface RecordFeePaymentInput extends PaymentInput {}
+export interface RecordFeePaymentInput extends PaymentInput { }
 
 export interface UpdateFeeTransactionStatusInput {
   id: string;
@@ -686,15 +699,15 @@ export interface GetLibraryBooksInput {
 
 export type CreateLibraryBookOutput = Book;
 
-export interface CreateLibraryBookInput extends BookInput {}
+export interface CreateLibraryBookInput extends BookInput { }
 
 export type IssueLibraryBookOutput = CirculationRecord;
 
-export interface IssueLibraryBookInput extends IssueBookInput {}
+export interface IssueLibraryBookInput extends IssueBookInput { }
 
 export type ReturnLibraryBookOutput = CirculationRecord;
 
-export interface ReturnLibraryBookInput extends ReturnBookInput {}
+export interface ReturnLibraryBookInput extends ReturnBookInput { }
 
 export type GetLibraryFinesOutput = FineRecord[];
 
@@ -711,23 +724,23 @@ export interface GetNoticesInput {
 
 export type CreateNoticeOutput = Notice;
 
-export interface CreateNoticeInput extends NoticeInput {}
+export interface CreateNoticeInput extends NoticeInput { }
 
 export type GetInstitutionalOverviewOutput = InstitutionalMetrics;
 
-export interface GetInstitutionalOverviewInput {}
+export interface GetInstitutionalOverviewInput { }
 
 export type GetAdmissionsAnalyticsOutput = AdmissionsMetrics;
 
-export interface GetAdmissionsAnalyticsInput {}
+export interface GetAdmissionsAnalyticsInput { }
 
 export type GetAcademicPerformanceAnalyticsOutput = AcademicMetrics;
 
-export interface GetAcademicPerformanceAnalyticsInput {}
+export interface GetAcademicPerformanceAnalyticsInput { }
 
 export type GetPlacementAnalyticsOutput = PlacementMetrics;
 
-export interface GetPlacementAnalyticsInput {}
+export interface GetPlacementAnalyticsInput { }
 
 export interface CampusOneCollegeERPPlatformAPI {
   loginUser: {

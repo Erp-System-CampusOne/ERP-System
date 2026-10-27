@@ -17,7 +17,7 @@ import {
   createExamination, updateExamination, deleteExamination, releaseHallTickets, remindFaculty,
   createCourse, updateCourse, deleteCourse,
   updateRolePermissions,
-  updateAdmissionStatus, saveTimetable,
+  updateAdmissionStatus, saveTimetable, deleteTimetableEntry,
   createAdminUser,
   getDocumentQueue, approveDocumentRequest, rejectDocumentRequest,
   getExaminers, assignExaminer,
@@ -245,8 +245,12 @@ export function useTimetableMutations() {
   return {
     save: useMutation({
       mutationFn: saveTimetable,
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'timetables'] }), // or whatever key is used
-    })
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'timetables'] }),
+    }),
+    deleteEntry: useMutation({
+      mutationFn: deleteTimetableEntry,
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'timetables'] }),
+    }),
   };
 }
 
