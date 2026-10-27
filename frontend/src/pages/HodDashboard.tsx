@@ -231,7 +231,17 @@ export default function HodDashboard() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.entries)) {
-          setTimetableEntries(data.entries);
+          // Normalize entries so courseId and facultyId are always resolved even if loaded from older/legacy records
+          const resolved = data.entries.map((entry: any) => {
+            const courseId = entry.courseId || deptCourses.find(c => c.code === entry.subjectCode || c.name === entry.subjectName)?.id || '';
+            const facultyId = entry.facultyId || (courseId ? (deptCourses.find(c => c.id === courseId) as any)?.facultyId : '') || deptFaculty.find((f: any) => f.user?.name === entry.facultyName || f.id === entry.facultyId)?.id || '';
+            return {
+              ...entry,
+              courseId,
+              facultyId
+            };
+          });
+          setTimetableEntries(resolved);
         }
       }
     } catch (e) {
@@ -269,7 +279,7 @@ export default function HodDashboard() {
     };
 
     setTimetableEntries(prev => [
-      ...prev.filter(entry => !(entry.dayOfWeek === periodForm.dayOfWeek && entry.period === Number(periodForm.period))),
+      ...prev.filter(entry => !(entry.dayOfWeek.toLowerCase() === periodForm.dayOfWeek.toLowerCase() && Number(entry.period) === Number(periodForm.period))),
       newEntry
     ]);
     setShowAddPeriodModal(false);
@@ -277,24 +287,68 @@ export default function HodDashboard() {
 
   const handleSaveTimetable = async () => {
     try {
+      // Ensure all entries have resolved courseId and facultyId before validation and save
+      const entriesToSave = timetableEntries.map(entry => {
+        const courseId = entry.courseId || deptCourses.find(c => c.code === entry.subjectCode || c.name === entry.subjectName)?.id || '';
+        const facultyId = entry.facultyId || (courseId ? (deptCourses.find(c => c.id === courseId) as any)?.facultyId : '') || deptFaculty.find((f: any) => f.user?.name === entry.facultyName || f.id === entry.facultyId)?.id || '';
+        return {
+          ...entry,
+          courseId,
+          facultyId
+        };
+      });
+
       // Validate that each entry has a course and faculty assigned
-      const invalidEntry = timetableEntries.find(entry => !entry.courseId || !entry.facultyId);
+      const invalidEntry = entriesToSave.find(entry => !entry.courseId || !entry.facultyId);
       if (invalidEntry) {
         alert(`Cannot save timetable: The lecture on ${invalidEntry.dayOfWeek} Period ${invalidEntry.period} is missing a course or faculty assignment.`);
         return;
+      }
+
+      // Validate internal duplicate slots (same day and period)
+      const slotSet = new Set<string>();
+      for (const entry of entriesToSave) {
+        const key = `${entry.dayOfWeek.toLowerCase()}_${entry.period}`;
+        if (slotSet.has(key)) {
+          alert(`Cannot save timetable: Duplicate lecture found for ${entry.dayOfWeek} Period ${entry.period}. Each period can only have one lecture.`);
+          return;
+        }
+        slotSet.add(key);
+      }
+
+      // Validate internal duplicate rooms (same day, period, and room)
+      const roomSet = new Set<string>();
+      for (const entry of entriesToSave) {
+        const room = (entry.roomNumber || '').trim().toLowerCase();
+        if (room) {
+          const key = `${entry.dayOfWeek.toLowerCase()}_${entry.period}_${room}`;
+          if (roomSet.has(key)) {
+            alert(`Cannot save timetable: Room ${entry.roomNumber} is assigned to multiple lectures on ${entry.dayOfWeek} Period ${entry.period}.`);
+            return;
+          }
+          roomSet.add(key);
+        }
       }
 
       await timetableMutations.save.mutateAsync({
         department: deptName,
         semester: timetableSemester,
         section: timetableSection,
-        entries: timetableEntries
+        entries: entriesToSave
       });
       alert('Department Timetable saved successfully!');
       await fetchTimetable();
     } catch (e: any) {
       console.error('Failed to save timetable:', e);
-      alert(e?.message || 'Failed to save timetable');
+      let msg = e?.message || 'Failed to save timetable';
+      try {
+        const jsonMatch = msg.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (parsed.message) msg = parsed.message;
+        }
+      } catch {}
+      alert(msg);
     }
   };
 
@@ -1234,7 +1288,20 @@ export default function HodDashboard() {
                       effectiveDeptId={effectiveDeptId}
                       onSelect={setSelectedDeptId}
                     />
-                    <Button variant="outline" size="sm" onClick={() => setShowAddPeriodModal(true)}>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      const defaultCourse = deptCourses[0];
+                      const courseFacId = (defaultCourse as any)?.facultyId || '';
+                      const isCourseFacValid = courseFacId ? deptFaculty.some((f: any) => f.id === courseFacId) : false;
+                      const defaultFacId = isCourseFacValid ? courseFacId : (deptFaculty[0]?.id || '');
+                      setPeriodForm({
+                        dayOfWeek: 'Monday',
+                        period: 1,
+                        courseId: defaultCourse?.id || '',
+                        facultyId: defaultFacId,
+                        roomNumber: 'LH-101'
+                      });
+                      setShowAddPeriodModal(true);
+                    }}>
                       <Plus className="w-4 h-4 mr-1" /> Add Period Slot
                     </Button>
                     <Button
@@ -1419,7 +1486,9 @@ export default function HodDashboard() {
                                     type="button"
                                     onClick={() => {
                                       const defaultCourse = deptCourses[0];
-                                      const defaultFacId = (defaultCourse as any)?.facultyId || deptFaculty[0]?.id || '';
+                                      const courseFacId = (defaultCourse as any)?.facultyId || '';
+                                      const isCourseFacValid = courseFacId ? deptFaculty.some((f: any) => f.id === courseFacId) : false;
+                                      const defaultFacId = isCourseFacValid ? courseFacId : (deptFaculty[0]?.id || '');
                                       setPeriodForm({
                                         dayOfWeek: day,
                                         period: slot.period,
@@ -1824,7 +1893,9 @@ export default function HodDashboard() {
                   onChange={(e) => {
                     const cId = e.target.value;
                     const matchedCourse = deptCourses.find(c => c.id === cId);
-                    const matchedFacId = (matchedCourse as any)?.facultyId || periodForm.facultyId || deptFaculty[0]?.id || '';
+                    const courseFacId = (matchedCourse as any)?.facultyId || '';
+                    const isCourseFacValid = courseFacId ? deptFaculty.some((f: any) => f.id === courseFacId) : false;
+                    const matchedFacId = isCourseFacValid ? courseFacId : (periodForm.facultyId || '');
                     setPeriodForm({
                       ...periodForm,
                       courseId: cId,

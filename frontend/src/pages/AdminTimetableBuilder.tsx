@@ -110,7 +110,7 @@ export default function AdminTimetableBuilder() {
       timeSlot
     };
 
-    setLocalEntries(prev => [...prev.filter(e => !(e.dayOfWeek === periodForm.dayOfWeek && e.period === periodForm.period)), newEntry]);
+    setLocalEntries(prev => [...prev.filter(e => !(e.dayOfWeek.toLowerCase() === periodForm.dayOfWeek.toLowerCase() && Number(e.period) === Number(periodForm.period))), newEntry]);
     setShowAddModal(false);
   };
 
@@ -139,7 +139,15 @@ export default function AdminTimetableBuilder() {
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.message || 'Failed to save timetable');
+      let msg = err.message || 'Failed to save timetable';
+      try {
+        const jsonMatch = msg.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (parsed.message) msg = parsed.message;
+        }
+      } catch {}
+      alert(msg);
     }
   };
 

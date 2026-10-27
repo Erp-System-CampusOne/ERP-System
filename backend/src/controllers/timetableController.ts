@@ -39,6 +39,7 @@ export const getTimetables = async (req: Request, res: Response) => {
       dayOfWeek: e.dayOfWeek,
       period: e.period,
       timeSlot: e.timeSlot,
+      courseId: e.courseId,
       subjectCode: e.course.code,
       subjectName: e.course.name,
       facultyId: e.facultyId,
@@ -95,6 +96,7 @@ export const generateTimetable = async (req: Request, res: Response) => {
       dayOfWeek: e.dayOfWeek,
       period: e.period,
       timeSlot: e.timeSlot,
+      courseId: e.courseId,
       subjectCode: e.course.code,
       subjectName: e.course.name,
       facultyId: e.facultyId,
@@ -172,7 +174,7 @@ export const saveTimetable = async (req: Request, res: Response) => {
       where: { departmentId: departmentId },
       select: { id: true, code: true, name: true, facultyId: true }
     });
-    const courseMap = new Map(deptCourses.map(c => [c.id, c]));
+    const courseMap = new Map<string, any>(deptCourses.map((c: any) => [c.id, c]));
 
     const deptFaculties = await prisma.faculty.findMany({
       where: { departmentId: departmentId },
@@ -249,6 +251,8 @@ export const saveTimetable = async (req: Request, res: Response) => {
         });
       }
 
+      const resolvedRoom = (e.roomNumber || 'LH-101').toString().trim();
+
       dataToInsert.push({
         courseId: e.courseId,
         facultyId: resolvedFacultyId,
@@ -258,8 +262,104 @@ export const saveTimetable = async (req: Request, res: Response) => {
         dayOfWeek: normalizedDay as any,
         period: period,
         timeSlot: e.timeSlot || '',
-        roomNumber: e.roomNumber || 'LH-101'
+        roomNumber: resolvedRoom
       });
+    }
+
+    // 1. Check for internal section slot double-booking within submitted payload
+    const seenSectionSlots = new Set<string>();
+    for (const item of dataToInsert) {
+      const slotKey = `${item.dayOfWeek}_${item.period}`;
+      if (seenSectionSlots.has(slotKey)) {
+        return res.status(400).json({
+          success: false,
+          message: `Conflict in submitted schedule: Multiple lectures assigned to ${item.dayOfWeek}, Period ${item.period} for Section ${targetSection}.`
+        });
+      }
+      seenSectionSlots.add(slotKey);
+    }
+
+    // 2. Check for internal faculty double-booking within submitted payload
+    const seenFacultySlots = new Set<string>();
+    for (const item of dataToInsert) {
+      const slotKey = `${item.dayOfWeek}_${item.period}_${item.facultyId}`;
+      if (seenFacultySlots.has(slotKey)) {
+        const facName = facultyMap.get(item.facultyId)?.user?.name || 'A faculty member';
+        return res.status(400).json({
+          success: false,
+          message: `Conflict in submitted schedule: ${facName} is assigned to multiple lectures on ${item.dayOfWeek}, Period ${item.period}.`
+        });
+      }
+      seenFacultySlots.add(slotKey);
+    }
+
+    // 3. Check for internal room double-booking within submitted payload
+    const seenRoomSlots = new Set<string>();
+    for (const item of dataToInsert) {
+      const slotKey = `${item.dayOfWeek}_${item.period}_${item.roomNumber.toLowerCase()}`;
+      if (seenRoomSlots.has(slotKey)) {
+        return res.status(400).json({
+          success: false,
+          message: `Conflict in submitted schedule: Room ${item.roomNumber} is assigned to multiple lectures on ${item.dayOfWeek}, Period ${item.period}.`
+        });
+      }
+      seenRoomSlots.add(slotKey);
+    }
+
+    // 4. Check for faculty scheduling conflicts against other sections/semesters in the database
+    for (const item of dataToInsert) {
+      const conflict = await prisma.timetableEntry.findFirst({
+        where: {
+          dayOfWeek: item.dayOfWeek,
+          period: item.period,
+          facultyId: item.facultyId,
+          NOT: {
+            departmentId: departmentId,
+            semester: parsedSemester,
+            section: targetSection
+          }
+        },
+        include: {
+          faculty: { include: { user: true } },
+          course: true
+        }
+      });
+
+      if (conflict) {
+        const facName = conflict.faculty?.user?.name || 'This faculty member';
+        return res.status(409).json({
+          success: false,
+          message: `Scheduling conflict: ${facName} is already assigned to ${conflict.course?.code || 'another lecture'} on ${item.dayOfWeek}, Period ${item.period} (Semester ${conflict.semester}, Section ${conflict.section}).`
+        });
+      }
+    }
+
+    // 5. Check for room scheduling conflicts against other sections/semesters in the database
+    for (const item of dataToInsert) {
+      const roomConflict = await prisma.timetableEntry.findFirst({
+        where: {
+          dayOfWeek: item.dayOfWeek,
+          period: item.period,
+          roomNumber: { equals: item.roomNumber, mode: 'insensitive' },
+          NOT: {
+            departmentId: departmentId,
+            semester: parsedSemester,
+            section: targetSection
+          }
+        },
+        include: {
+          course: true,
+          department: true
+        }
+      });
+
+      if (roomConflict) {
+        const deptLabel = roomConflict.department?.name ? ` (${roomConflict.department.name})` : '';
+        return res.status(409).json({
+          success: false,
+          message: `Room ${item.roomNumber} is already assigned on ${item.dayOfWeek}, Period ${item.period} (Semester ${roomConflict.semester}, Section ${roomConflict.section}${deptLabel}). Choose another room or resolve the conflicting lecture.`
+        });
+      }
     }
 
     // Atomic transaction: replace entries for this specific section/semester/dept
@@ -286,7 +386,33 @@ export const saveTimetable = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Failed to save timetable', error);
-    res.status(500).json({ success: false, message: error.message || 'Server error' });
+    if (error?.code === 'P2002') {
+      const target = error?.meta?.target;
+      const targetStr = Array.isArray(target) ? target.join(', ') : (error.message || '');
+      if (targetStr.includes('roomNumber') || targetStr.includes('TimetableEntry_dayOfWeek_period_roomNumber_key')) {
+        return res.status(409).json({
+          success: false,
+          message: 'Room assignment conflict: The specified room is already assigned on this day and period. Choose another room or resolve the conflicting lecture.'
+        });
+      }
+      if (targetStr.includes('facultyId') || targetStr.includes('TimetableEntry_dayOfWeek_period_facultyId_key')) {
+        return res.status(409).json({
+          success: false,
+          message: 'Scheduling conflict: The assigned faculty member is already booked on this day and period in another section. Choose an available faculty member.'
+        });
+      }
+      if (targetStr.includes('section') || targetStr.includes('TimetableEntry_dayOfWeek_period_section_semester_departmentId_key')) {
+        return res.status(409).json({
+          success: false,
+          message: 'Scheduling conflict: This section already has a lecture scheduled for this period.'
+        });
+      }
+      return res.status(409).json({
+        success: false,
+        message: 'A scheduling conflict occurred with an existing timetable entry. Please verify room, faculty, and time slot availability.'
+      });
+    }
+    res.status(500).json({ success: false, message: 'Server error saving timetable' });
   }
 };
 
