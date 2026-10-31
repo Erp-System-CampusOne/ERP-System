@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
-import { BookOpen, ArrowLeft, Lock, Eye, EyeOff, CheckCircle, ArrowRight } from 'lucide-react';
+import { BookOpen, ArrowLeft, Lock, Eye, EyeOff, CheckCircle, ArrowRight, ShieldAlert, Loader2 } from 'lucide-react';
 
+import { verifyResetToken, resetPasswordWithToken } from '@/api/apiCall';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,10 +34,51 @@ export default function ResetPassword() {
   const [error, setError] = useState('');
 
   const token = searchParams.get('token');
+  const [isValidatingToken, setIsValidatingToken] = useState(!!token);
+  const [tokenError, setTokenError] = useState('');
+
+  useEffect(() => {
+    if (!token) return;
+
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await verifyResetToken({ token });
+        if (!res.valid && mounted) {
+          setTokenError(res.message || 'This password reset link is invalid or has expired.');
+        }
+      } catch (err: any) {
+        if (!mounted) return;
+        const msg = err.message || '';
+        let userMsg = 'This password reset link is invalid or has expired.';
+        try {
+          const jsonMatch = msg.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.message) userMsg = parsed.message;
+          }
+        } catch {
+          // Fallback to generic message if parsing failed
+        }
+        setTokenError(userMsg);
+      } finally {
+        if (mounted) setIsValidatingToken(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!token) {
+      setError('Missing recovery token. Please request a new link.');
+      return;
+    }
 
     if (!password.trim()) {
       setError('Please enter a new password');
@@ -44,7 +86,7 @@ export default function ResetPassword() {
     }
 
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError('Password must be at least 8 characters long');
       return;
     }
 
@@ -59,26 +101,65 @@ export default function ResetPassword() {
     }
 
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    setIsSuccess(true);
-    setIsLoading(false);
+    try {
+      const res = await resetPasswordWithToken({ token, password });
+      if (res && res.success) {
+        setIsSuccess(true);
+      } else {
+        setError(res?.message || 'Password reset could not be completed.');
+      }
+    } catch (err: any) {
+      const msg = err.message || '';
+      let userMsg = 'Password reset failed. The link may have expired or already been used.';
+      try {
+        const jsonMatch = msg.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (parsed.message) userMsg = parsed.message;
+        } else if (msg) {
+          userMsg = msg;
+        }
+      } catch {
+        if (msg) userMsg = msg;
+      }
+      setError(userMsg);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  if (!token) {
+  if (!token || tokenError) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8 bg-background">
         <Card className="w-full max-w-md border-2 shadow-lg">
           <CardHeader className="text-center space-y-2">
-            <CardTitle className="text-2xl font-display text-destructive">Invalid Link</CardTitle>
-            <CardDescription>
-              This password reset link is invalid or has expired.
+            <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-1">
+              <ShieldAlert className="w-6 h-6 text-destructive" />
+            </div>
+            <CardTitle className="text-2xl font-display text-destructive">Invalid or Expired Link</CardTitle>
+            <CardDescription className="leading-relaxed">
+              {tokenError || 'This password reset link is invalid, malformed, or has already expired.'}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <Button className="w-full" onClick={() => navigate('/forgot-password')}>
-              Request New Link
+              Request New Reset Link
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => navigate('/login')}>
+              Return to Sign In
             </Button>
           </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isValidatingToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8 bg-background">
+        <Card className="w-full max-w-md border-2 shadow-lg py-8 text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground font-medium">Verifying reset token securely...</p>
         </Card>
       </div>
     );

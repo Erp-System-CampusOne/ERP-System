@@ -28,6 +28,8 @@ const Login = lazy(() => import('../pages/Login'));
 const ForgotPassword = lazy(() => import('../pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('../pages/ResetPassword'));
 const VerifyEmail = lazy(() => import('../pages/VerifyEmail'));
+const Settings = lazy(() => import('../pages/Settings'));
+const PasswordResetRequests = lazy(() => import('../pages/PasswordResetRequests'));
 const Student = lazy(() => import('../pages/Student'));
 const StudentCourses = lazy(() => import('../pages/StudentCourses'));
 const StudentAttendance = lazy(() => import('../pages/StudentAttendance'));
@@ -113,6 +115,26 @@ export const router = createBrowserRouter([
       <RouteBoundary routeId="not-found">
         <NotFound />
       </RouteBoundary>
+    ),
+  },
+  {
+    path: '/settings',
+    element: (
+      <ProtectedRoute>
+        <RouteBoundary routeId="settings">
+          <Settings />
+        </RouteBoundary>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/password-reset-requests',
+    element: (
+      <ProtectedRoute>
+        <RouteBoundary routeId="password-reset-requests">
+          <PasswordResetRequests />
+        </RouteBoundary>
+      </ProtectedRoute>
     ),
   },
   {

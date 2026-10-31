@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
-import { BookOpen, ArrowLeft, Mail, ArrowRight, CheckCircle } from 'lucide-react';
+import { BookOpen, ArrowLeft, Mail, ArrowRight, CheckCircle, ShieldAlert } from 'lucide-react';
 
+import { requestPasswordRecovery } from '@/api/apiCall';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 const container = {
   hidden: {},
@@ -23,29 +25,78 @@ export default function ForgotPassword() {
   const reduceMotion = useReducedMotion();
   const Wrapper = reduceMotion ? 'div' : motion.div;
 
+  const [campusId, setCampusId] = useState('');
   const [email, setEmail] = useState('');
+  const [reason, setReason] = useState('');
+  const [submittedCampusId, setSubmittedCampusId] = useState('');
+  const [submittedEmail, setSubmittedEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [unconfiguredEmail, setUnconfiguredEmail] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setUnconfiguredEmail(false);
 
-    if (!email.trim()) {
-      setError('Please enter your email address');
+    const trimmedCampusId = campusId.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedCampusId) {
+      setError('Please enter your official Campus ID (e.g. COID1001)');
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!trimmedEmail) {
+      setError('Please enter your registered institutional email address');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       setError('Please enter a valid email address');
       return;
     }
 
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSubmitted(true);
-    setIsLoading(false);
+
+    try {
+      const res = await requestPasswordRecovery({
+        campusId: trimmedCampusId,
+        email: trimmedEmail,
+        reason: reason.trim() || undefined
+      });
+      if (res && res.success) {
+        setSubmittedCampusId(trimmedCampusId);
+        setSubmittedEmail(trimmedEmail);
+        setIsSubmitted(true);
+      } else {
+        setError(res?.message || 'Password recovery request could not be completed.');
+      }
+    } catch (err: any) {
+      const msg = err.message || '';
+      let userMsg = 'Password recovery could not be processed. Please try again.';
+      try {
+        const jsonMatch = msg.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (parsed.code === 'EMAIL_SERVICE_NOT_CONFIGURED' || parsed.message?.includes('not configured')) {
+            setUnconfiguredEmail(true);
+          }
+          if (parsed.message) userMsg = parsed.message;
+        } else if (msg) {
+          if (msg.includes('EMAIL_SERVICE_NOT_CONFIGURED') || msg.includes('not configured')) {
+            setUnconfiguredEmail(true);
+          }
+          userMsg = msg;
+        }
+      } catch {
+        if (msg) userMsg = msg;
+      }
+      setError(userMsg);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -85,7 +136,7 @@ export default function ForgotPassword() {
             <motion.div variants={item} className="space-y-3">
               <div className="flex items-center justify-center gap-3 text-sm">
                 <Mail className="w-4 h-4 text-primary" />
-                <span className="text-muted-foreground">Password Recovery</span>
+                <span className="text-muted-foreground">Institutional Credential Recovery</span>
                 <Mail className="w-4 h-4 text-primary" />
               </div>
             </motion.div>
@@ -105,11 +156,13 @@ export default function ForgotPassword() {
 
           <Card className="border-2 shadow-lg">
             <CardHeader className="text-center space-y-2">
-              <CardTitle className="text-2xl font-display">Forgot Password?</CardTitle>
+              <CardTitle className="text-2xl font-display">
+                {isSubmitted ? 'Recovery Request Submitted' : 'Password Recovery'}
+              </CardTitle>
               <CardDescription>
                 {isSubmitted
-                  ? 'Check your email for reset instructions'
-                  : 'Enter your email to receive reset instructions'}
+                  ? 'Your request is pending institutional superior approval'
+                  : 'Verify your Campus ID and registered institutional email'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -126,62 +179,140 @@ export default function ForgotPassword() {
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">
-                      We've sent password reset instructions to
+                      If your Campus ID and registered email match an active account, your recovery request has been forwarded to your institutional superior (such as your Department HOD or Administrator) for review:
                     </p>
-                    <p className="font-semibold text-foreground">{email}</p>
+                    <div className="p-3 rounded-lg bg-muted/60 text-xs font-mono space-y-1 text-left border">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Campus ID:</span>
+                        <span className="font-bold text-foreground">{submittedCampusId}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Email:</span>
+                        <span className="font-bold text-foreground">{submittedEmail}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Workflow:</span>
+                        <span className="text-amber-600 dark:text-amber-400 font-semibold">Pending Superior Approval</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed pt-1">
+                      In accordance with CampusOne security governance, password reset links are issued only after authorization by your designated superior. Once approved, single-use reset instructions will be released.
+                    </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    className="w-full mt-4"
-                    onClick={() => {
-                      setIsSubmitted(false);
-                      setEmail('');
-                    }}
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Try different email
-                  </Button>
+                  <div className="flex flex-col gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        setIsSubmitted(false);
+                        setCampusId('');
+                        setEmail('');
+                        setReason('');
+                      }}
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Submit Another Request
+                    </Button>
+                    <Button
+                      className="w-full"
+                      onClick={() => navigate('/login')}
+                    >
+                      Back to Sign In
+                    </Button>
+                  </div>
                 </motion.div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-4">
                   <Wrapper
                     variants={container}
                     initial="hidden"
                     animate="show"
-                    className="space-y-5"
+                    className="space-y-4"
                   >
-                    <motion.div variants={item} className="space-y-2">
-                      <Label htmlFor="email" className="text-sm font-semibold">
-                        Email Address
+                    <motion.div variants={item} className="space-y-1.5">
+                      <Label htmlFor="campusId" className="text-xs font-semibold uppercase tracking-wider">
+                        Campus ID (COID) <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="campusId"
+                        type="text"
+                        placeholder="e.g. COID1001"
+                        value={campusId}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCampusId(e.target.value)}
+                        className="h-10 font-mono"
+                        autoComplete="username"
+                        required
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        Your canonical CampusOne identity (e.g. COID1001, COID3001)
+                      </p>
+                    </motion.div>
+
+                    <motion.div variants={item} className="space-y-1.5">
+                      <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider">
+                        Registered Institutional Email <span className="text-destructive">*</span>
                       </Label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
                           id="email"
                           type="email"
-                          placeholder="john@example.com"
+                          placeholder="name@campus.edu"
                           value={email}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                          className="h-11 pl-10"
+                          className="h-10 pl-9"
+                          autoComplete="email"
+                          required
                         />
                       </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Must match the official email associated with this Campus ID
+                      </p>
+                    </motion.div>
+
+                    <motion.div variants={item} className="space-y-1.5">
+                      <Label htmlFor="reason" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Reason for Recovery (Optional)
+                      </Label>
+                      <Input
+                        id="reason"
+                        type="text"
+                        placeholder="e.g. Forgotten password, locked account"
+                        value={reason}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReason(e.target.value)}
+                        className="h-10 text-xs"
+                      />
                     </motion.div>
 
                     {error && (
                       <motion.div
                         initial={{ opacity: 0, y: -8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-medium"
+                        className={cn(
+                          "p-3 rounded-lg text-xs font-medium flex items-start gap-2.5 leading-relaxed",
+                          unconfiguredEmail
+                            ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
+                            : "bg-destructive/10 text-destructive border border-destructive/20"
+                        )}
+                        role="alert"
                       >
-                        {error}
+                        <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                        <div>
+                          <span>{error}</span>
+                          {unconfiguredEmail && (
+                            <p className="mt-1 text-[11px] opacity-90">
+                              Direct outbound email is not configured. Your institutional superior will approve your request and provide reset authorization directly in-app.
+                            </p>
+                          )}
+                        </div>
                       </motion.div>
                     )}
 
-                    <motion.div variants={item} className="flex gap-3">
+                    <motion.div variants={item} className="flex gap-3 pt-2">
                       <Button
                         type="button"
                         variant="outline"
-                        className="flex-1 h-12"
+                        className="flex-1 h-11"
                         onClick={() => navigate('/login')}
                       >
                         <ArrowLeft className="w-4 h-4 mr-2" />
@@ -189,7 +320,7 @@ export default function ForgotPassword() {
                       </Button>
                       <Button
                         type="submit"
-                        className="flex-1 h-12 text-base font-bold"
+                        className="flex-1 h-11 text-sm font-bold"
                         disabled={isLoading}
                       >
                         {isLoading ? (
@@ -198,11 +329,11 @@ export default function ForgotPassword() {
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                             </svg>
-                            Sending...
+                            Submitting...
                           </span>
                         ) : (
-                          <span className="flex items-center gap-2">
-                            Send Reset Link <ArrowRight className="w-4 h-4" />
+                          <span className="flex items-center gap-1.5">
+                            Submit Request <ArrowRight className="w-4 h-4" />
                           </span>
                         )}
                       </Button>

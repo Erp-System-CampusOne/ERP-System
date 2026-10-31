@@ -1,3 +1,5 @@
+name: erp-system
+
 services:
 
   # ─── PostgreSQL Database ───────────────────────────────────────────────────

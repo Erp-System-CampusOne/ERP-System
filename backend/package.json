@@ -6,6 +6,7 @@
     "start": "node dist/index.js",
     "dev": "nodemon src/index.ts",
     "build": "tsc",
+    "test": "node scripts/validate_issue_16.js && node scripts/validate_approval_workflow.js",
     "postinstall": "prisma generate",
     "seed:production": "ts-node prisma/seed.production.ts"
   },
@@ -21,6 +22,7 @@
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.12.0",
+    "nodemailer": "^10.2.1",
     "pg": "^8.23.0"
   },
   "devDependencies": {
@@ -31,6 +33,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
     "@types/node": "^20.12.7",
+    "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
     "nodemon": "^3.1.0",
     "prisma": "^7.10.0",
