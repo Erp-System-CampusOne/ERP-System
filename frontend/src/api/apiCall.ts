@@ -11,6 +11,20 @@ import {
   LogoutUserOutput,
   GetCurrentUserInput,
   GetCurrentUserOutput,
+  ForgotPasswordInput,
+  ForgotPasswordOutput,
+  VerifyResetTokenInput,
+  VerifyResetTokenOutput,
+  ResetPasswordInput,
+  ResetPasswordOutput,
+  UpdateUserProfileInput,
+  UpdateUserProfileOutput,
+  ListRecoveryRequestsOutput,
+  PendingRecoveryRequestsCountOutput,
+  ApproveRecoveryRequestInput,
+  ApproveRecoveryRequestOutput,
+  RejectRecoveryRequestInput,
+  RejectRecoveryRequestOutput,
   GetStudentsInput,
   GetStudentsOutput,
   CreateStudentInput,
@@ -186,8 +200,10 @@ async function request<T>(options: {
   const url = `${apiConfig.baseUrl}${urlPath}${queryString ? `?${queryString}` : ''}`;
 
   // 3. Collect headers
+  const storedToken = typeof window !== 'undefined' ? localStorage.getItem('campusone_jwt_token') : null;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    ...(storedToken && !apiConfig.headers.Authorization ? { Authorization: `Bearer ${storedToken}` } : {}),
     ...apiConfig.headers,
   };
 
@@ -866,3 +882,106 @@ export const getDepartmentHods = async (): Promise<any> => request<any>({ operat
 export const relieveDepartmentHod = async (departmentId?: string): Promise<any> => request<any>({ operationId: 'relieveDepartmentHod', method: 'POST', path: departmentId ? `/admin/hods/relieve/${departmentId}` : `/admin/hod/relieve`, input: {}, pathParams: [], queryParams: [], headerParams: [] });
 export const relieveInstitutionHod = async (): Promise<any> => request<any>({ operationId: 'relieveInstitutionHod', method: 'POST', path: `/admin/hod/relieve`, input: {}, pathParams: [], queryParams: [], headerParams: [] });
 export const promoteFacultyToHod = async (facultyId: string): Promise<any> => request<any>({ operationId: 'promoteFacultyToHod', method: 'POST', path: `/admin/hod/promote`, input: { facultyId }, pathParams: [], queryParams: [], headerParams: [] });
+
+export const requestPasswordRecovery = async (input: ForgotPasswordInput): Promise<ForgotPasswordOutput> => {
+  return request<ForgotPasswordOutput>({
+    operationId: 'requestPasswordRecovery',
+    method: 'POST',
+    path: '/auth/forgot-password',
+    input,
+    pathParams: [],
+    queryParams: [],
+    headerParams: []
+  });
+};
+
+export const verifyResetToken = async (input: VerifyResetTokenInput): Promise<VerifyResetTokenOutput> => {
+  return request<VerifyResetTokenOutput>({
+    operationId: 'verifyResetToken',
+    method: 'POST',
+    path: '/auth/verify-reset-token',
+    input,
+    pathParams: [],
+    queryParams: [],
+    headerParams: []
+  });
+};
+
+export const resetPasswordWithToken = async (input: ResetPasswordInput): Promise<ResetPasswordOutput> => {
+  return request<ResetPasswordOutput>({
+    operationId: 'resetPasswordWithToken',
+    method: 'POST',
+    path: '/auth/reset-password',
+    input,
+    pathParams: [],
+    queryParams: [],
+    headerParams: []
+  });
+};
+
+export const updateUserProfile = async (input: UpdateUserProfileInput): Promise<UpdateUserProfileOutput> => {
+  return request<UpdateUserProfileOutput>({
+    operationId: 'updateUserProfile',
+    method: 'PATCH',
+    path: '/auth/profile',
+    input,
+    pathParams: [],
+    queryParams: [],
+    headerParams: []
+  });
+};
+
+export const listRecoveryRequests = async (params?: { status?: string; search?: string }): Promise<ListRecoveryRequestsOutput> => {
+  const queryParts: string[] = [];
+  if (params?.status && params.status !== 'all') {
+    queryParts.push(`status=${encodeURIComponent(params.status)}`);
+  }
+  if (params?.search && params.search.trim()) {
+    queryParts.push(`search=${encodeURIComponent(params.search.trim())}`);
+  }
+  const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+
+  return request<ListRecoveryRequestsOutput>({
+    operationId: 'listRecoveryRequests',
+    method: 'GET',
+    path: `/auth/recovery-requests${queryString}`,
+    pathParams: [],
+    queryParams: [],
+    headerParams: []
+  });
+};
+
+export const getPendingRecoveryRequestsCount = async (): Promise<PendingRecoveryRequestsCountOutput> => {
+  return request<PendingRecoveryRequestsCountOutput>({
+    operationId: 'getPendingRecoveryRequestsCount',
+    method: 'GET',
+    path: '/auth/recovery-requests/pending-count',
+    pathParams: [],
+    queryParams: [],
+    headerParams: []
+  });
+};
+
+export const approveRecoveryRequest = async (id: string, notes?: string): Promise<ApproveRecoveryRequestOutput> => {
+  return request<ApproveRecoveryRequestOutput>({
+    operationId: 'approveRecoveryRequest',
+    method: 'POST',
+    path: `/auth/recovery-requests/${encodeURIComponent(id)}/approve`,
+    input: { body: { notes } },
+    pathParams: [],
+    queryParams: [],
+    headerParams: []
+  });
+};
+
+export const rejectRecoveryRequest = async (id: string, reason?: string): Promise<RejectRecoveryRequestOutput> => {
+  return request<RejectRecoveryRequestOutput>({
+    operationId: 'rejectRecoveryRequest',
+    method: 'POST',
+    path: `/auth/recovery-requests/${encodeURIComponent(id)}/reject`,
+    input: { body: { reason } },
+    pathParams: [],
+    queryParams: [],
+    headerParams: []
+  });
+};

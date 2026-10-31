@@ -14,6 +14,26 @@ export interface User {
   department?: string;
   avatarUrl?: string;
   phone?: string;
+  roles?: string[];
+  studentProfile?: {
+    id?: string;
+    rollNumber?: string;
+    semester?: number | string;
+    section?: string;
+    batch?: string;
+    degree?: string;
+    department?: { name?: string };
+    cgpa?: number;
+    attendancePercentage?: number;
+    feeStatus?: string;
+  };
+  facultyProfile?: {
+    id?: string;
+    employeeCode?: string;
+    designation?: string;
+    qualification?: string;
+    department?: { name?: string };
+  };
 }
 
 export interface LoginInput {
@@ -990,3 +1010,111 @@ export interface FinancialHealthAnalytics {
 }
 
 export type GetFinancialHealthAnalyticsOutput = FinancialHealthAnalytics;
+
+export interface ForgotPasswordInput {
+  campusId?: string;
+  identifier?: string;
+  email: string;
+  reason?: string;
+}
+
+export interface ForgotPasswordOutput {
+  success: boolean;
+  message: string;
+  code?: string;
+  requestId?: string;
+}
+
+export interface VerifyResetTokenInput {
+  token: string;
+}
+
+export interface VerifyResetTokenOutput {
+  valid: boolean;
+  message?: string;
+}
+
+export interface ResetPasswordInput {
+  token: string;
+  password: string;
+}
+
+export interface ResetPasswordOutput {
+  success: boolean;
+  message: string;
+}
+
+export interface UpdateUserProfileInput {
+  phone?: string | null;
+  name?: string;
+}
+
+export interface UpdateUserProfileOutput {
+  success: boolean;
+  user: User;
+}
+
+export interface PasswordRecoveryRequestRecord {
+  id: string;
+  targetUserId: string;
+  campusId: string;
+  email: string;
+  maskedEmail?: string;
+  department?: string;
+  status: 'pending_approval' | 'approved' | 'rejected' | 'reset_link_sent' | 'completed' | 'expired';
+  approverUserId?: string | null;
+  reason?: string | null;
+  reviewNotes?: string | null;
+  reviewedAt?: string | null;
+  createdAt: string;
+  expiresAt: string;
+  targetUser?: {
+    id: string;
+    name: string;
+    campusId: string;
+    email: string;
+    maskedEmail?: string;
+    role: string;
+    department?: string;
+  };
+  approverUser?: {
+    id: string;
+    name: string;
+    campusId: string;
+    role: string;
+  };
+}
+
+export interface PendingRecoveryRequestsCountOutput {
+  success: boolean;
+  count: number;
+  message?: string;
+}
+
+export interface ListRecoveryRequestsOutput {
+  success: boolean;
+  message?: string;
+  requests: PasswordRecoveryRequestRecord[];
+}
+
+export interface ApproveRecoveryRequestInput {
+  id: string;
+  notes?: string;
+}
+
+export interface ApproveRecoveryRequestOutput {
+  success: boolean;
+  message: string;
+  status?: string;
+  resetLink?: string;
+}
+
+export interface RejectRecoveryRequestInput {
+  id: string;
+  reason?: string;
+}
+
+export interface RejectRecoveryRequestOutput {
+  success: boolean;
+  message: string;
+}

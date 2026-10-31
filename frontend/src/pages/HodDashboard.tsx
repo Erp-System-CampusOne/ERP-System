@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   Users, GraduationCap, BookOpen, Calendar,
   FileCheck, Plus, Search, CheckCircle2,
   Download, Save, Loader2, UploadCloud,
   XCircle, ArrowRight, Award, Clock, AlertCircle,
-  Building2, Sparkles
+  Building2, Sparkles, KeyRound
 } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -417,6 +417,15 @@ export default function HodDashboard() {
                         departments={departments}
                         effectiveDeptId={effectiveDeptId}
                         onSelect={setSelectedDeptId}
+                      />
+                      <Link to="/password-reset-requests">
+                        <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                          <KeyRound className="w-3.5 h-3.5" />
+                          Reset Requests
+                        </Button>
+                      </Link>
+                      {/* Placeholder for cleanly closing DivisionSelector */}
+                      <span className="hidden"
                       />
                       <AddStudentDialog
                         defaultDepartment={deptName}

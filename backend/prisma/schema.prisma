@@ -168,6 +168,9 @@ model User {
   roleAssignments  UserRoleAssignment[]
   credentials      UserCredential[]
   authSessions     AuthSession[]
+  passwordResetTokens PasswordResetToken[]
+  recoveryRequestsAsTarget   PasswordRecoveryRequest[] @relation("RecoveryTargetUser")
+  recoveryRequestsAsApprover PasswordRecoveryRequest[] @relation("RecoveryApproverUser")
 
   // P2 Lifecycle Relations
   employeeProfile         EmployeeProfile?
@@ -982,6 +985,55 @@ model AuthSession {
   @@index([expiresAt])
   @@index([userId, isActive])
   @@map("auth_sessions")
+}
+
+model PasswordResetToken {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @map("user_id")
+  tokenHash   String    @unique @map("token_hash")
+  expiresAt   DateTime  @db.Timestamptz @map("expires_at")
+  isUsed      Boolean   @default(false) @map("is_used")
+  consumedAt  DateTime? @db.Timestamptz @map("consumed_at")
+  ipAddress   String?   @map("ip_address")
+  userAgent   String?   @map("user_agent")
+  createdAt   DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@index([isUsed])
+  @@map("password_reset_tokens")
+}
+
+model PasswordRecoveryRequest {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  targetUserId    String    @map("target_user_id")
+  campusId        String    @map("campus_id")
+  email           String
+  status          String    @default("pending_approval") // pending_approval, approved, rejected, reset_link_sent, completed, expired
+  approverUserId  String?   @map("approver_user_id")
+  reason          String?
+  reviewNotes     String?   @map("review_notes")
+  reviewedAt      DateTime? @db.Timestamptz @map("reviewed_at")
+  resetTokenHash  String?   @unique @map("reset_token_hash")
+  expiresAt       DateTime  @db.Timestamptz @map("expires_at")
+  ipAddress       String?   @map("ip_address")
+  userAgent       String?   @map("user_agent")
+  createdAt       DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt       DateTime  @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  targetUser      User      @relation("RecoveryTargetUser", fields: [targetUserId], references: [id], onDelete: Cascade)
+  approverUser    User?     @relation("RecoveryApproverUser", fields: [approverUserId], references: [id], onDelete: SetNull)
+
+  @@index([targetUserId])
+  @@index([campusId])
+  @@index([approverUserId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("password_recovery_requests")
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

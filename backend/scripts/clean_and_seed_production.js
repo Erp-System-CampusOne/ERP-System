@@ -183,6 +183,26 @@ async function seedDatabase(connectionString, label) {
     await client.query(`INSERT INTO user_credentials (user_id, credential_type, password_hash, algorithm) VALUES ($1, 'password', $2, 'bcrypt');`, [finRes.rows[0].id, financePasswordHash]);
     await client.query(`INSERT INTO user_role_assignments (user_id, role_id, is_active, valid_from) VALUES ($1, $2, true, NOW());`, [finRes.rows[0].id, roleIdMap['finance_officer']]);
 
+    // 1 Management (Principal / Director)
+    const mgmtPasswordHash = await bcrypt.hash('director123', 10);
+    const mgmtRes = await client.query(`
+      INSERT INTO "User" (id, "campusId", email, name, password, role, "createdAt", "updatedAt")
+      VALUES (gen_random_uuid()::text, 'COID1008', 'director@campus.edu', 'Dr. Rajeshwar Rao (Director)', $1, 'management', NOW(), NOW())
+      RETURNING id;
+    `, [mgmtPasswordHash]);
+    await client.query(`INSERT INTO user_credentials (user_id, credential_type, password_hash, algorithm) VALUES ($1, 'password', $2, 'bcrypt');`, [mgmtRes.rows[0].id, mgmtPasswordHash]);
+    await client.query(`INSERT INTO user_role_assignments (user_id, role_id, is_active, valid_from) VALUES ($1, $2, true, NOW());`, [mgmtRes.rows[0].id, roleIdMap['management']]);
+
+    // 1 Designated IT / Recovery Administrator
+    const recPasswordHash = await bcrypt.hash('admin123', 10);
+    const recRes = await client.query(`
+      INSERT INTO "User" (id, "campusId", email, name, password, role, "createdAt", "updatedAt")
+      VALUES (gen_random_uuid()::text, 'COID1009', 'recovery.admin@campus.edu', 'IT Recovery Administrator', $1, 'admin', NOW(), NOW())
+      RETURNING id;
+    `, [recPasswordHash]);
+    await client.query(`INSERT INTO user_credentials (user_id, credential_type, password_hash, algorithm) VALUES ($1, 'password', $2, 'bcrypt');`, [recRes.rows[0].id, recPasswordHash]);
+    await client.query(`INSERT INTO user_role_assignments (user_id, role_id, is_active, valid_from) VALUES ($1, $2, true, NOW());`, [recRes.rows[0].id, roleIdMap['admin']]);
+
     console.log(`[${label}] 7. Seeding 1 Single Institution HOD (Dr. Sarah Jenkins - COID1002)...`);
     const hodUserRes = await client.query(`
       INSERT INTO "User" (id, "campusId", email, name, password, role, phone, "createdAt", "updatedAt")

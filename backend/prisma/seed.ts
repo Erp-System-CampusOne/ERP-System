@@ -160,6 +160,42 @@ async function main() {
     },
   });
 
+  // 3d. Management User (Principal / Director)
+  const managementPassword = await bcrypt.hash('director123', 10);
+  await prisma.user.upsert({
+    where: { email: 'director@campus.edu' },
+    update: {
+      campusId: 'COID1008',
+      name: 'Dr. Rajeshwar Rao (Director)',
+      role: 'management',
+    },
+    create: {
+      campusId: 'COID1008',
+      email: 'director@campus.edu',
+      name: 'Dr. Rajeshwar Rao (Director)',
+      password: managementPassword,
+      role: 'management',
+    },
+  });
+
+  // 3e. IT Recovery Administrator User
+  const recoveryPassword = await bcrypt.hash('admin123', 10);
+  await prisma.user.upsert({
+    where: { email: 'recovery.admin@campus.edu' },
+    update: {
+      campusId: 'COID1009',
+      name: 'IT Recovery Administrator',
+      role: 'admin',
+    },
+    create: {
+      campusId: 'COID1009',
+      email: 'recovery.admin@campus.edu',
+      name: 'IT Recovery Administrator',
+      password: recoveryPassword,
+      role: 'admin',
+    },
+  });
+
   // 4. Student
   const studentPassword = await bcrypt.hash('student123', 10);
   const studentUser = await prisma.user.upsert({
